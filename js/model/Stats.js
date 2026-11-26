@@ -35,6 +35,58 @@ export function ratePuzzle(diskCount, moves, hints) {
   return { minimum, stars, score, efficiency, perfect: moves === minimum };
 }
 
+// ---------------------------------------------------------------------
+// Personal bests (kept between visits). These functions are PURE: they
+// only compare numbers and return new objects. Saving them in the browser
+// is done elsewhere (js/controller/Preferences.js), because the model
+// never touches the browser.
+//
+// Shape: { levels: { 3: { fewestMoves, fastestMs }, ... }, bestScore }
+// ---------------------------------------------------------------------
+
+const isCount = (x) => Number.isFinite(x) && x >= 0;
+
+/** Clean up saved data (it may be missing, old or edited by hand). */
+export function normalizeBests(raw) {
+  const bests = { levels: {}, bestScore: 0 };
+  if (!raw || typeof raw !== 'object') return bests;
+  for (const n of Object.keys(BASE_SCORE)) {
+    const level = raw.levels?.[n];
+    if (level && isCount(level.fewestMoves) && isCount(level.fastestMs)) {
+      bests.levels[n] = { fewestMoves: level.fewestMoves, fastestMs: level.fastestMs };
+    }
+  }
+  if (isCount(raw.bestScore)) bests.bestScore = raw.bestScore;
+  return bests;
+}
+
+/**
+ * Compare one solved puzzle with the saved bests for its level.
+ * @returns {{ bests, improved: { first: boolean, moves: boolean, time: boolean } }}
+ */
+export function updateLevelBest(saved, diskCount, moves, timeMs) {
+  const bests = normalizeBests(saved);
+  const old = bests.levels[diskCount];
+  const improved = {
+    first: !old,
+    moves: !old || moves < old.fewestMoves,
+    time: !old || timeMs < old.fastestMs,
+  };
+  bests.levels[diskCount] = {
+    fewestMoves: old ? Math.min(old.fewestMoves, moves) : moves,
+    fastestMs: old ? Math.min(old.fastestMs, timeMs) : timeMs,
+  };
+  return { bests, improved };
+}
+
+/** Compare a challenge's total score with the best one ever. */
+export function updateBestScore(saved, score) {
+  const bests = normalizeBests(saved);
+  const improved = score > bests.bestScore;
+  if (improved) bests.bestScore = score;
+  return { bests, improved };
+}
+
 /** "3", "3 and 4", "3, 4 and 5" */
 function joinLevels(levels) {
   if (levels.length <= 1) return levels.join('');

@@ -67,7 +67,17 @@ The full spec lives in `docs/` (plan + assignment PDF:
 - No layout shift: messages use the fixed-height message bar; warnings change colours only; overlays/borders are fixed layers. Verify with headless Chrome rect comparisons.
 - The welcome card must never cover Peg A's disks (`Modals.fitWelcome()` collapses the rules if needed).
 
-## Poster (assets/poster.png) — Phase 6 work
+## Phase 6 rules
+- `Preferences.js` is the ONLY file that touches localStorage (key `hanoi-challenge:v1`), always in try/catch. If storage is unavailable, personal bests are not shown.
+- Personal-best logic is pure (`normalizeBests`, `updateLevelBest`, `updateBestScore` in Stats.js).
+- Sounds are called explicitly by the controller (move, invalid, win, warning). Learning Mode is silent. Audio unlocks on the first pointerdown/keydown.
+- Projector Mode (`html.projector`): +25% text, thicker lines, larger disks. Hides ONLY `.extra` (stars, score, personal bests, copy result), the welcome rules and the nickname field. Never hide "How it works" or the move log (teaching content).
+- 4K (>= 2560 px) raises the size caps and the content width (3200 px).
+- Live URL is hard-coded in og:url / og:image / twitter:image and the README. Update them if the repo is renamed.
+
+## Poster (assets/poster.png)
+- Files: `poster.webp` (155 KB, full), `poster-banner.webp` (title crop for the welcome card), `og-image.jpg` (1200 × 630 link preview).
+- Welcome banner sits in the card's left column at >= 1024 px; `fitWelcome()` collapses the rules, then hides the banner, if the card would cover a disk.
 - NEVER use it as a gameplay background (its disk colours differ from the assignment's and would hurt contrast).
 - Make `assets/poster.webp` (< 200 KB); keep the PNG only as a fallback.
 - Open Graph + Twitter meta tags (og:title, og:description, og:image with the ABSOLUTE GitHub Pages URL) so shared links show the poster.

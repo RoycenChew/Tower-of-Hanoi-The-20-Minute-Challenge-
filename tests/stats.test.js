@@ -1,7 +1,44 @@
 // stats.test.js — stars, score (hint penalty, 0 floor), efficiency and totals.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Stats, starsFor, ratePuzzle, shareText } from '../js/model/Stats.js';
+import {
+  Stats, starsFor, ratePuzzle, shareText, normalizeBests, updateLevelBest, updateBestScore,
+} from '../js/model/Stats.js';
+
+test('personal bests: the first solve of a level is saved as the best', () => {
+  const { bests, improved } = updateLevelBest(null, 3, 9, 40_000);
+  assert.deepEqual(improved, { first: true, moves: true, time: true });
+  assert.deepEqual(bests.levels[3], { fewestMoves: 9, fastestMs: 40_000 });
+});
+
+test('personal bests: only real improvements count, each one separately', () => {
+  let saved = updateLevelBest(null, 3, 9, 40_000).bests;
+  let r = updateLevelBest(saved, 3, 7, 50_000); // fewer moves, slower
+  assert.deepEqual(r.improved, { first: false, moves: true, time: false });
+  assert.deepEqual(r.bests.levels[3], { fewestMoves: 7, fastestMs: 40_000 });
+  saved = r.bests;
+  r = updateLevelBest(saved, 3, 7, 40_000); // equal is not better
+  assert.deepEqual(r.improved, { first: false, moves: false, time: false });
+  r = updateLevelBest(saved, 4, 15, 60_000); // other levels are independent
+  assert.equal(r.improved.first, true);
+  assert.deepEqual(r.bests.levels[3], { fewestMoves: 7, fastestMs: 40_000 });
+});
+
+test('personal bests: best total score', () => {
+  let r = updateBestScore(null, 700);
+  assert.equal(r.improved, true);
+  r = updateBestScore(r.bests, 300);
+  assert.equal(r.improved, false);
+  assert.equal(r.bests.bestScore, 700);
+});
+
+test('personal bests: corrupted saved data is cleaned up', () => {
+  assert.deepEqual(normalizeBests('rubbish'), { levels: {}, bestScore: 0 });
+  assert.deepEqual(normalizeBests({
+    levels: { 3: { fewestMoves: 7, fastestMs: 1000 }, 4: { fewestMoves: 'x' }, 9: { fewestMoves: 1, fastestMs: 1 } },
+    bestScore: -5,
+  }), { levels: { 3: { fewestMoves: 7, fastestMs: 1000 } }, bestScore: 0 });
+});
 
 test('shareText for "Copy my result"', () => {
   const url = 'https://example.com/';

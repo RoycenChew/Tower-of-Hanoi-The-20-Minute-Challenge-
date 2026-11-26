@@ -65,11 +65,16 @@ export class Input {
 
   /**
    * @param {Document} doc
-   * @param {Board} board
-   * @param {GameController} controller
-   * @param {LearningMode} learning
+   * @param {object} parts
+   * @param {Board} parts.board
+   * @param {GameController} parts.controller
+   * @param {LearningMode} parts.learning
+   * @param {UIOverlay} parts.ui
+   * @param {Modals} parts.modals
+   * @param {Sound} parts.sound
+   * @param {Preferences} parts.prefs
    */
-  constructor(doc, board, controller, learning) {
+  constructor(doc, { board, controller, learning, ui, modals, sound, prefs }) {
     this.#doc = doc;
     this.#board = board;
     this.#controller = controller;
@@ -144,6 +149,34 @@ export class Input {
 
     // ---- Keyboard ----
     doc.addEventListener('keydown', (event) => this.#onKeyDown(event));
+
+    // ---- Sound: browsers allow audio only after a click or key press ----
+    const unlockAudio = () => sound.unlock();
+    doc.addEventListener('pointerdown', unlockAudio, { capture: true });
+    doc.addEventListener('keydown', unlockAudio, { capture: true });
+
+    // ---- Top-bar tools (both choices are remembered) ----
+    onClick('btn-mute', () => {
+      sound.setMuted(!sound.muted);
+      prefs.set('muted', sound.muted);
+      ui.setMuted(sound.muted);
+    });
+    onClick('btn-projector', () => {
+      const on = !doc.documentElement.classList.contains('projector');
+      ui.setProjector(on);
+      prefs.set('projector', on);
+      modals.fitWelcome(); // bigger text: make sure the card still leaves the disks visible
+    });
+
+    // ---- Window width changes: re-check that the welcome card fits ----
+    // (Only the WIDTH: phones fire "resize" when the address bar slides,
+    // and that must not close rules the player has opened.)
+    let width = doc.defaultView.innerWidth;
+    doc.defaultView.addEventListener('resize', () => {
+      if (doc.defaultView.innerWidth === width) return;
+      width = doc.defaultView.innerWidth;
+      modals.fitWelcome();
+    });
   }
 
   /** Abort a drag: the disk goes back under normal control (no counting). */

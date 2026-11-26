@@ -23,7 +23,11 @@
   top: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* Phone: title, tools, timer on one row; difficulty below. */
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "title tools timer"
+    "diff  diff  diff";
   align-items: center;
   gap: 6px 12px;
   padding: 8px 0;
@@ -48,7 +52,8 @@
 }
 
 .timer {
-  font-size: clamp(36px, 5vw, 120px);
+  grid-area: timer;
+  font-size: calc(clamp(36px, 5vw, 120px) * var(--font-scale));
   font-weight: 800;
   font-variant-numeric: tabular-nums; /* digits the same width where the font allows */
   line-height: 1;
@@ -72,8 +77,23 @@
   50% { opacity: 0.35; }
 }
 
+.title {
+  grid-area: title;
+}
+
+.topbar__tools {
+  grid-area: tools;
+  display: flex;
+  gap: 8px;
+}
+
+/* Projector Mode is for big screens: no button on phones. */
+#btn-projector {
+  display: none;
+}
+
 .difficulty {
-  grid-column: 1 / -1;
+  grid-area: diff;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -152,18 +172,19 @@
   .controls {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  #btn-projector {
+    display: inline-block;
+  }
 }
 
 /* ---------- Desktop: two columns ---------- */
 
 @media (min-width: 1024px) {
   .topbar {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-areas: "title timer diff tools";
     gap: 12px 24px;
-  }
-
-  .difficulty {
-    grid-column: auto;
   }
 
   .main {
@@ -178,4 +199,44 @@
   .app {
     padding: 0 48px 48px;
   }
+}
+
+/* ---------- 4K screens (2560 px and wider) ---------- */
+
+/* Without this, a 3840 px screen would show a small board in the middle.
+   Raise the size caps and the content width instead. */
+@media (min-width: 2560px) {
+  :root {
+    --base-font: clamp(28px, 0.6vw + 12px, 40px);
+    --disk-h-base: clamp(32px, 4vh, 84px);
+    --base-h: 14px;
+  }
+
+  .app {
+    max-width: 3200px;
+    padding: 0 64px 64px;
+  }
+
+  .timer {
+    font-size: calc(clamp(120px, 5vw, 180px) * var(--font-scale));
+  }
+}
+
+/* ---------- Projector Mode ---------- */
+
+/* +25% text, thicker lines, larger disks. The teaching content (move log,
+   "How it works", Learning Mode) stays; only the game-feel extras and the
+   welcome rules / nickname are hidden, to keep a projected screen clean. */
+.projector {
+  --font-scale: 1.25;
+  --disk-scale: 1.15;
+  --line-w: 2px;
+  --btn-border: 3px;
+  --base-h: 14px;
+}
+
+.projector .extra,
+.projector .welcome__rules,
+.projector .welcome__row {
+  display: none !important;
 }

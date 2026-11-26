@@ -14,25 +14,37 @@ import { Board } from './view/Board.js';
 import { UIOverlay } from './view/UIOverlay.js';
 import { Modals } from './view/Modals.js';
 import { LearningPanel } from './view/LearningPanel.js';
+import { Sound } from './view/Sound.js';
 import { GameController } from './controller/GameController.js';
 import { LearningMode } from './controller/LearningMode.js';
+import { Preferences } from './controller/Preferences.js';
 import { Input } from './controller/Input.js';
 
+// ---- Model ----
 const bus = new EventBus();
 const game = new GameState(bus, 3); // 3 disks on Peg A; B and C empty
 const timer = new ChallengeTimer(bus);
 const stats = new Stats();
 
+// ---- Remembered settings (sound, Projector Mode, nickname, personal bests) ----
+const prefs = new Preferences();
+const sound = new Sound({ muted: prefs.get('muted', false) });
+
+// ---- Views ----
 const board = new Board(document.getElementById('board'));
 const ui = new UIOverlay(document);
 const modals = new Modals(document);
+ui.setMuted(sound.muted);
+ui.setProjector(prefs.get('projector', false));
+document.getElementById('nickname').value = prefs.get('nickname', '');
 
-// Learning Mode: its own board and state; it talks to its panel via 'learn:step'.
+// ---- Learning Mode: its own board and state; it talks to its panel via 'learn:step' ----
 const learning = new LearningMode({ bus });
 new LearningPanel(document, bus);
 
-const controller = new GameController({ bus, game, board, ui, modals, stats, timer, learning });
-new Input(document, board, controller, learning);
+// ---- Controller and input ----
+const controller = new GameController({ bus, game, board, ui, modals, stats, timer, learning, sound, prefs });
+new Input(document, { board, controller, learning, ui, modals, sound, prefs });
 
 // Draw the starting position straight away (locked under the welcome card),
 // then make sure the card does not hide any of the disks.

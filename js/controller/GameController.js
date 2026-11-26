@@ -14,6 +14,7 @@
 // animation is queued afterwards and only shows what already happened.
 
 import { MESSAGES, describeMove, validateMove } from '../model/Rules.js';
+import { updateLevelBest, updateBestScore, normalizeBests } from '../model/Stats.js';
 import { AnimationQueue } from './AnimationQueue.js';
 
 /** Screen states (section 5.1). */
@@ -39,6 +40,8 @@ export class GameController {
   #timer;
   #queue;
   #learning;
+  #sound;
+  #prefs;
   #now;
   #setTimeout;
   #stopLearning;
@@ -69,6 +72,8 @@ export class GameController {
    * @param {ChallengeTimer} deps.timer
    * @param {AnimationQueue} [deps.queue]    runs move animations one at a time
    * @param {LearningMode} [deps.learning]   the step-by-step walkthrough
+   * @param {{play: Function}} [deps.sound]   sound effects (silent by default)
+   * @param {Preferences} [deps.prefs]       remembered settings and personal bests
    * @param {() => void} [deps.stopLearning] stops Learning Mode when time runs out
    * @param {() => void} [deps.cancelDrag]   cancels a drag in progress (set by Input)
    */
@@ -76,6 +81,8 @@ export class GameController {
     bus, game, board, ui, modals, stats, timer,
     queue = new AnimationQueue(),
     learning = null,
+    sound = { play() {} },
+    prefs = null,
     stopLearning = () => learning?.lock(),
     cancelDrag = () => {},
     now = () => Date.now(),
@@ -89,6 +96,8 @@ export class GameController {
     this.#timer = timer;
     this.#queue = queue;
     this.#learning = learning;
+    this.#sound = sound;
+    this.#prefs = prefs;
     this.#stopLearning = stopLearning;
     this.#cancelDrag = cancelDrag;
     this.#now = now;
@@ -135,7 +144,9 @@ export class GameController {
   /** "Start Challenge": start the one and only 20-minute clock. */
   start(nickname = '') {
     if (this.screen !== Screen.WELCOME) return; // works only once
-    this.nickname = nickname.trim().slice(0, 20) || 'Player';
+    const typed = nickname.trim().slice(0, 20);
+    this.nickname = typed || 'Player';
+    this.#prefs?.set('nickname', typed); // pre-filled next time
     this.screen = Screen.PLAYING;
     this.#puzzleStartedAt = this.#now();
     this.#timer.start();
@@ -169,8 +180,10 @@ export class GameController {
     // 6. Full-screen "Time's up!".
     this.#modals.showTimeUp();
     // 7. After 1.5 s, the Final Summary.
+    const summary = this.#stats.summary();
+    const personal = this.#saveBestScore(summary.score);
     this.#setTimeout(() => {
-      this.#modals.showSummary(this.#stats.summary(), this.nickname);
+      this.#modals.showSummary(summary, this.nickname, personal);
     }, SUMMARY_DELAY_MS);
   }
 
@@ -219,6 +232,7 @@ export class GameController {
     // LIFO: only the disk that peek() returns can be taken off a peg.
     if (this.#game.pegs[peg].peek() !== disk) {
       this.#ui.showMessage(MESSAGES.TOP_ONLY, 'error');
+      this.#sound.play('invalid');
       return false;
     }
     if (this.selectedPeg !== null) {
@@ -287,6 +301,7 @@ export class GameController {
     const result = this.#game.undo(); // "Nothing to undo." arrives as move:invalid
     if (result.ok) {
       this.#stats.recordUndo();
+      this.#sound.play('move');
       this.#ui.clearMessage();
       this.#animate(() => this.#board.animateMove(result.move.disk, fromRect));
     }
@@ -411,6 +426,7 @@ export class GameController {
     this.#ui.setTimerLevel(level);
     this.#ui.showBanner(text, type);
     this.#ui.announce(text); // screen readers hear it at once
+    this.#sound.play('warning');
   }
 
   #select(peg) {
@@ -419,6 +435,7 @@ export class GameController {
       // Rejected selection, not a move attempt: message + shake, not logged or counted.
       this.#ui.showMessage(MESSAGES.EMPTY_SOURCE, 'error');
       this.#board.shakePeg(peg);
+      this.#sound.play('invalid');
       return;
     }
     this.selectedPeg = peg;
@@ -450,12 +467,14 @@ export class GameController {
 
     if (!result.ok) {
       this.#stats.recordInvalid();
+      this.#sound.play('invalid');
       if (dropped) this.#animate(() => this.#board.animateReturn(from, fromRect));
       else this.#board.shakeTopDisk(from); // the disk "drops back" with a shake
       return;
     }
 
     this.#stats.recordMove();
+    this.#sound.play('move');
     this.#ui.pulseMoves();
     const victory = result.solved ? this.#recordSolved() : null;
     if (!victory) this.#ui.clearMessage();
@@ -464,7 +483,12 @@ export class GameController {
     //    The victory modal waits until the disk has landed.
     this.#animate(
       () => this.#board.animateMove(result.move.disk, fromRect),
-      () => { if (victory && this.screen === Screen.VICTORY) this.#modals.showVictory(victory); },
+      () => {
+        if (victory && this.screen === Screen.VICTORY) {
+          this.#modals.showVictory(victory);
+          this.#sound.play('win');
+        }
+      },
     );
   }
 
@@ -475,10 +499,11 @@ export class GameController {
   #recordSolved() {
     const game = this.#game;
     const n = game.diskCount;
+    const timeMs = this.#now() - this.#puzzleStartedAt;
     const rating = this.#stats.recordSolved({
       diskCount: n,
       moves: game.moveCount,
-      timeMs: this.#now() - this.#puzzleStartedAt,
+      timeMs,
       hints: game.hintsUsed,
     });
     this.screen = Screen.VICTORY;
@@ -490,7 +515,27 @@ export class GameController {
       moves: game.moveCount,
       hints: game.hintsUsed,
       nextLevel: n < 5 ? n + 1 : null, // null after 5 disks: every level cleared
+      personalBest: this.#saveLevelBest(n, game.moveCount, timeMs),
     };
+  }
+
+  /**
+   * Personal bests are kept between visits. Returns what improved, or null
+   * when nothing can be saved (then the modal shows no personal-best line).
+   */
+  #saveLevelBest(diskCount, moves, timeMs) {
+    if (!this.#prefs?.available) return null;
+    const { bests, improved } = updateLevelBest(this.#prefs.get('bests'), diskCount, moves, timeMs);
+    this.#prefs.set('bests', bests);
+    return improved;
+  }
+
+  /** At Time's up: save the best total score; returns the bests for the summary (or null). */
+  #saveBestScore(score) {
+    if (!this.#prefs?.available) return null;
+    const { bests, improved } = updateBestScore(this.#prefs.get('bests'), score);
+    this.#prefs.set('bests', bests);
+    return { bests: normalizeBests(bests), newBestScore: improved };
   }
 
   /** Fresh puzzle with n disks. Stats totals and the challenge clock are untouched. */

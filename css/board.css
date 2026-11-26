@@ -11,7 +11,7 @@
   gap: clamp(4px, 1vw, 20px);
   padding: clamp(10px, 1.5vw, 28px) clamp(6px, 1.5vw, 28px);
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: var(--line-w) solid var(--line);
   border-radius: var(--radius);
   touch-action: manipulation; /* no double-tap zoom delay on phones */
 }
@@ -45,7 +45,7 @@
   left: 3%;
   right: 3%;
   bottom: 0;
-  height: 10px;
+  height: var(--base-h);
   background: var(--peg);
   border-radius: 5px;
 }
@@ -54,7 +54,7 @@
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: clamp(6px, 0.8vw, 14px);
+  width: calc(clamp(6px, 0.8vw, 14px) * var(--disk-scale));
   height: calc(var(--disk-h) * 5.9);
   transform: translateX(-50%);
   background: var(--peg);
@@ -66,7 +66,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 10px;
+  bottom: var(--base-h);
   display: flex;
   flex-direction: column-reverse;
   align-items: center;

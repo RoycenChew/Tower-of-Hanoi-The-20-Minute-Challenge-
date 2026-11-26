@@ -87,6 +87,24 @@ export class UIOverlay {
       `Minimum for ${n} disks: ${power} − 1 = ${snapshot.minMoves} moves.`;
   }
 
+  // ----- Top-bar tools -----
+
+  /** Mute button: pressed = sound is off. */
+  setMuted(muted) {
+    const button = this.#doc.getElementById('btn-mute');
+    button.setAttribute('aria-pressed', String(muted));
+    button.title = muted ? 'Sound is off' : 'Mute sound';
+  }
+
+  /**
+   * Projector Mode: bigger text, thicker lines, larger disks, and the
+   * game-feel extras hidden (see layout.css). The teaching content stays.
+   */
+  setProjector(on) {
+    this.#doc.documentElement.classList.toggle('projector', on);
+    this.#doc.getElementById('btn-projector').setAttribute('aria-pressed', String(on));
+  }
+
   /** A short "pop" of the Moves counter after a valid move (transform only). */
   pulseMoves() {
     if (reducedMotion()) return;

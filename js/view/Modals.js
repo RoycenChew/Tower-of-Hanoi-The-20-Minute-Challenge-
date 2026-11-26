@@ -24,6 +24,7 @@ export class Modals {
     this.#el = {
       welcome: byId('welcome'),
       welcomeRules: byId('welcome-rules'),
+      banner: byId('welcome-banner'),
       startButton: byId('btn-start'),
       locked: [byId('board'), doc.querySelector('.controls')],
       victory: byId('victory'),
@@ -51,17 +52,25 @@ export class Modals {
   // ----- Welcome -----
 
   /**
-   * Safety net, called once the board is drawn: the starting position must
-   * stay visible, so if the card would cover the top disk of Peg A on this
-   * screen, collapse the rules to make the card shorter.
+   * Safety net: the starting position must stay visible. Called once the
+   * board is drawn, and again when the window is resized or Projector Mode
+   * changes. Starts from the normal layout, then makes the card shorter
+   * step by step while it still covers the top disk of Peg A:
+   *   1. collapse the rules,  2. hide the poster banner.
    */
   fitWelcome() {
-    const topDisk = this.#doc.querySelector('.peg .disks')?.lastElementChild;
-    if (!topDisk) return;
+    if (this.#el.welcome.hidden) return;
+    this.#el.welcomeRules.open = this.#doc.defaultView.matchMedia('(min-width: 600px)').matches;
+    this.#el.banner.hidden = false;
+    if (this.#welcomeCoversDisks()) this.#el.welcomeRules.open = false;
+    if (this.#welcomeCoversDisks()) this.#el.banner.hidden = true;
+  }
+
+  #welcomeCoversDisks() {
+    const topDisk = this.#doc.querySelector('#board .disks')?.lastElementChild;
+    if (!topDisk) return false;
     const card = this.#el.welcome.firstElementChild;
-    if (card.getBoundingClientRect().bottom > topDisk.getBoundingClientRect().top) {
-      this.#el.welcomeRules.open = false;
-    }
+    return card.getBoundingClientRect().bottom > topDisk.getBoundingClientRect().top;
   }
 
   hideWelcome() {
@@ -73,7 +82,7 @@ export class Modals {
 
   /**
    * @param {object} info  { diskCount, moves, minimum, stars, efficiency,
-   *   perfect, score, timeMs, hints, nextLevel }
+   *   perfect, score, timeMs, hints, nextLevel, personalBest }
    */
   showVictory(info) {
     const byId = (id) => this.#doc.getElementById(id);
@@ -99,6 +108,11 @@ export class Modals {
     byId('victory-all-cleared').hidden = info.nextLevel !== null;
     again.classList.toggle('btn--primary', info.nextLevel === null);
 
+    // Personal best (only when the browser can remember it).
+    const best = byId('victory-best');
+    best.textContent = personalBestText(n, info.personalBest);
+    best.hidden = best.textContent === '';
+
     this.#el.victory.showModal();
     (info.nextLevel === null ? again : next).focus();
     launchConfetti(this.#el.victory); // inside the dialog, so it shows above the backdrop
@@ -115,7 +129,12 @@ export class Modals {
     this.#el.timeUp.hidden = false;
   }
 
-  showSummary(summary, nickname) {
+  /**
+   * @param {object} summary   Stats.summary()
+   * @param {string} nickname
+   * @param {{bests, newBestScore}|null} personal  null when nothing can be saved
+   */
+  showSummary(summary, nickname, personal = null) {
     const byId = (id) => this.#doc.getElementById(id);
 
     byId('summary-player').textContent = `Well played, ${nickname}!`;
@@ -136,21 +155,31 @@ export class Modals {
       ? `Cleared: ${cleared.join(', ')} disks`
       : 'No levels cleared');
 
-    // Best result per level.
+    // Best result per level (this challenge), and the best ever if saved.
+    this.#doc.querySelector('.best-ever').hidden = !personal;
     byId('summary-best').replaceChildren(...DIFFICULTIES.map((n) => {
       const best = summary.bestByLevel[n];
+      const ever = personal?.bests.levels[n];
       const row = this.#doc.createElement('tr');
-      for (const text of [
+      const cells = [
         `${n} disks`,
         best ? String(best.fewestMoves) : '—',
         best ? ChallengeTimer.format(best.fastestMs) : '—',
-      ]) {
+      ];
+      if (personal) cells.push(ever ? `${ever.fewestMoves} moves, ${ChallengeTimer.format(ever.fastestMs)}` : '—');
+      for (const text of cells) {
         const cell = this.#doc.createElement('td');
         cell.textContent = text;
         row.append(cell);
       }
       return row;
     }));
+
+    const bestScore = byId('summary-best-score');
+    bestScore.hidden = !personal;
+    if (personal) {
+      bestScore.textContent = personal.newBestScore ? ' New best score!' : ` (your best: ${personal.bests.bestScore})`;
+    }
 
     const url = this.#doc.location.origin + this.#doc.location.pathname;
     this.#el.summary.dataset.share = shareText(summary, nickname, url);
@@ -174,4 +203,14 @@ export class Modals {
       status.textContent = 'Copy the text below by hand.';
     }
   }
+}
+
+/** The personal-best line in the victory modal ('' = show nothing). */
+function personalBestText(n, improved) {
+  if (!improved) return '';
+  if (improved.first) return `First time clearing ${n} disks: personal best saved.`;
+  if (improved.moves && improved.time) return `New personal best for ${n} disks: fewest moves and fastest time!`;
+  if (improved.moves) return `New personal best for ${n} disks: fewest moves!`;
+  if (improved.time) return `New personal best for ${n} disks: fastest time!`;
+  return '';
 }

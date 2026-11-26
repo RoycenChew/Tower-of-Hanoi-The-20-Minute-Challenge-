@@ -20,7 +20,7 @@ const RETURN_MS = 150;
 
 /** Gameplay moves: about 300 ms in total. */
 export const GAME_TIMING = Object.freeze({ lift: 80, slide: 140, drop: 80 });
-/** Learning Mode (Phase 5): slower, easier to follow. */
+/** Learning Mode: slower, easier to follow. */
 export const LEARN_TIMING = Object.freeze({ lift: 150, slide: 250, drop: 150 });
 
 /** True when the player asked their device for less motion. */

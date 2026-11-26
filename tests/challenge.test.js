@@ -10,6 +10,13 @@ import { ChallengeTimer, TimerState, CHALLENGE_MS } from '../js/model/ChallengeT
 import { GameController, Screen, SUMMARY_DELAY_MS, PRESS_R_AGAIN } from '../js/controller/GameController.js';
 import { AnimationQueue } from '../js/controller/AnimationQueue.js';
 import { LearningMode } from '../js/controller/LearningMode.js';
+import { Preferences } from '../js/controller/Preferences.js';
+
+/** A fake localStorage backed by a Map. */
+function fakeStorage() {
+  const map = new Map();
+  return { getItem: (k) => map.get(k) ?? null, setItem: (k, v) => map.set(k, String(v)), removeItem: (k) => map.delete(k) };
+}
 
 const MIN = 60 * 1000;
 /** Let pending promise callbacks run (an animation that just finished, etc.). */
@@ -23,12 +30,13 @@ const settle = () => new Promise((resolve) => setImmediate(resolve));
  * { realAnimations: true } the REAL AnimationQueue is used and each
  * animation waits until the test calls finishAnimation().
  */
-function setup({ realAnimations = false } = {}) {
+function setup({ realAnimations = false, prefs = null } = {}) {
   let time = 1_000_000;
   let tick = null;           // the timer's interval callback
   const timeouts = [];       // setTimeout calls made by the controller
   const log = [];            // ordered record of view calls
   const running = [];        // animations waiting to be finished by the test
+  const sounds = [];         // sound effects played, in order
 
   const bus = new EventBus();
   const game = new GameState(bus, 3);
@@ -77,7 +85,7 @@ function setup({ realAnimations = false } = {}) {
     showVictory(info) { this.victory = info; log.push(['showVictory']); },
     closeAll() { this.victory = null; log.push(['closeAll']); },
     showTimeUp: () => log.push(['showTimeUp']),
-    showSummary(summary, nickname) { this.summary = { summary, nickname }; log.push(['showSummary']); },
+    showSummary(summary, nickname, personal) { this.summary = { summary, nickname, personal }; log.push(['showSummary']); },
   };
 
   const queue = realAnimations
@@ -93,7 +101,8 @@ function setup({ realAnimations = false } = {}) {
   });
 
   const controller = new GameController({
-    bus, game, board, ui, modals, stats, timer, queue, learning,
+    bus, game, board, ui, modals, stats, timer, queue, learning, prefs,
+    sound: { play: (name) => sounds.push(name) },
     now: () => time,
     setTimeout: (fn, ms) => timeouts.push({ fn, ms }),
     stopLearning: () => { log.push(['stopLearning']); learning.lock(); },
@@ -102,7 +111,7 @@ function setup({ realAnimations = false } = {}) {
 
   const advance = (ms) => { time += ms; tick?.(); };
   return {
-    game, stats, timer, controller, ui, modals, log, timeouts, board, queue, running, learning,
+    game, stats, timer, controller, ui, modals, log, timeouts, board, queue, running, learning, sounds,
     /** Move the clock forward and let the timer tick once. */
     advance,
     /**
@@ -747,4 +756,98 @@ test("TC-03: Time's up during Learning Mode autoplay halts it at once", () => {
   learning.play();
   assert.equal(learning.index, 2, 'demo controls are refused');
   assert.equal(modals.summary, null); // the summary follows 1.5 s later, as usual
+});
+
+// =====================================================================
+// Phase 6: sound effects, personal bests, remembered nickname.
+// =====================================================================
+
+test('sounds: move, invalid, win, and the two warnings, each at the right moment', async () => {
+  const { controller, sounds, advance, click, solveByClicks } = setup();
+  controller.start();
+  click(1);          // empty source peg: error sound
+  click(0, 2);       // valid move
+  click(0, 2);       // Disk 2 onto Disk 1: invalid
+  controller.undo(); // undo: soft move sound
+  assert.deepEqual(sounds, ['invalid', 'move', 'invalid', 'move']);
+
+  sounds.length = 0;
+  controller.restart();
+  solveByClicks(3);
+  assert.equal(sounds.filter((s) => s === 'win').length, 0, 'no win sound before the disk lands');
+  await settle();
+  assert.equal(sounds.at(-1), 'win');
+  assert.equal(sounds.filter((s) => s === 'move').length, 7);
+
+  sounds.length = 0;
+  advance(CHALLENGE_MS - 5 * 60 * 1000);
+  advance(4 * 60 * 1000);
+  assert.deepEqual(sounds, ['warning', 'warning'], 'warn5 and warn1');
+});
+
+test('sounds: no sound for refused input, and Learning Mode is silent', () => {
+  const { controller, learning, sounds, click, runLearnTimer } = setup();
+  click(0, 2); // before Start: refused
+  assert.deepEqual(sounds, []);
+  controller.start();
+  controller.openLearning();
+  learning.play();
+  while (runLearnTimer());
+  learning.previous();
+  assert.deepEqual(sounds, [], 'demo moves make no sound');
+});
+
+test('dragging a non-top disk plays the error sound', () => {
+  const { controller, sounds } = setup();
+  controller.start();
+  controller.beginDrag(0, 3);
+  assert.deepEqual(sounds, ['invalid']);
+});
+
+test('the nickname is remembered for next time', () => {
+  const prefs = new Preferences(fakeStorage());
+  const { controller } = setup({ prefs });
+  controller.start('  Ming ');
+  assert.equal(prefs.get('nickname'), 'Ming');
+});
+
+test('personal bests: saved across challenges; shown in victory and summary', async () => {
+  const storage = fakeStorage();
+
+  // First visit: optimal 3-disk solve (7 moves, 300 points).
+  let t = setup({ prefs: new Preferences(storage) });
+  t.controller.start();
+  t.solveByClicks(3);
+  await settle();
+  assert.deepEqual(t.modals.victory.personalBest, { first: true, moves: true, time: true });
+  t.advance(CHALLENGE_MS);
+  t.timeouts.at(-1).fn();
+  assert.equal(t.modals.summary.personal.newBestScore, true);
+  assert.equal(t.modals.summary.personal.bests.bestScore, 300);
+
+  // Second visit (same storage): 8 moves, 200 points. Not better.
+  t = setup({ prefs: new Preferences(storage) });
+  t.controller.start();
+  t.click(0, 1, 1, 2); // Disk 1 A->B->C: 2 moves for what one move does
+  for (const m of solve(3).slice(1)) t.click(m.from, m.to);
+  await settle();
+  assert.equal(t.modals.victory.moves, 8);
+  assert.equal(t.modals.victory.personalBest.first, false);
+  assert.equal(t.modals.victory.personalBest.moves, false, '8 moves does not beat 7');
+  t.advance(CHALLENGE_MS);
+  t.timeouts.at(-1).fn();
+  assert.equal(t.modals.summary.personal.newBestScore, false, '200 does not beat 300');
+  assert.equal(t.modals.summary.personal.bests.bestScore, 300);
+  assert.equal(t.modals.summary.personal.bests.levels[3].fewestMoves, 7);
+});
+
+test('personal bests are not shown when the browser cannot save them', async () => {
+  const { controller, modals, advance, timeouts, solveByClicks } = setup({ prefs: new Preferences(null) });
+  controller.start();
+  solveByClicks(3);
+  await settle();
+  assert.equal(modals.victory.personalBest, null);
+  advance(CHALLENGE_MS);
+  timeouts.at(-1).fn();
+  assert.equal(modals.summary.personal, null);
 });

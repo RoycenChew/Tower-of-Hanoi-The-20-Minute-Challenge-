@@ -47,7 +47,16 @@
   /* Sizes */
   --radius: 12px;
   --gap: clamp(10px, 1.2vw, 28px);
-  --disk-h: clamp(22px, 4vh, 56px);
+  /* Sizes are built from a BASE value times a SCALE, so the 4K breakpoint
+     can change the base and Projector Mode can change the scale. */
+  --base-font: clamp(16px, 0.6vw + 12px, 28px);
+  --disk-h-base: clamp(22px, 4vh, 56px);
+  --font-scale: 1;
+  --disk-scale: 1;
+  --disk-h: calc(var(--disk-h-base) * var(--disk-scale));
+  --line-w: 1px;   /* card and panel borders */
+  --btn-border: 2px;
+  --base-h: 10px;  /* thickness of the base under each peg */
 
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
@@ -66,7 +75,7 @@ html {
 body {
   margin: 0;
   font-family: var(--font);
-  font-size: clamp(16px, 0.6vw + 12px, 28px);
+  font-size: calc(var(--base-font) * var(--font-scale));
   line-height: 1.4;
   color: var(--text);
   background: var(--bg);
