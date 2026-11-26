@@ -1,1 +1,137 @@
-/* layout.css — page regions and responsive breakpoints. (Filled in during Phase 2.) */
+/* layout.css — page regions and responsive breakpoints.
+
+   MOBILE FIRST: the rules at the top are the PHONE layout (one column).
+   Each @media (min-width: ...) block below only ADDS changes for bigger
+   screens, so a small phone never depends on desktop styles.
+
+     < 600 px      phone: one column, sticky top bar, short title, panels collapsed
+     600–1023 px   tablet: one column, metrics and controls in one row, panels open
+     1024–1919 px  desktop: two columns (board ~65% left, panels right)
+     ≥ 1920 px     large screen / projector: wider margins, content max 2400 px
+*/
+
+.app {
+  max-width: 2400px;
+  margin: 0 auto;
+  padding: 0 16px 24px;
+}
+
+/* ---------- Top bar ---------- */
+
+.topbar {
+  position: sticky; /* the timer stays visible while scrolling on a phone */
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 0;
+  margin-bottom: var(--gap);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+.title {
+  font-size: 1.15em;
+  line-height: 1.2;
+}
+
+/* Phone: show "Hanoi Challenge"; the full title stays for screen readers. */
+.title-full {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.timer {
+  font-size: clamp(36px, 5vw, 120px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums; /* digits all the same width: no jitter */
+  line-height: 1;
+}
+
+.difficulty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Main regions ---------- */
+
+.main {
+  display: grid;
+  gap: var(--gap);
+}
+
+.game,
+.side {
+  display: grid;
+  gap: var(--gap);
+  align-content: start;
+  min-width: 0; /* lets grid children shrink instead of overflowing */
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* ---------- Tablet ---------- */
+
+@media (min-width: 600px) {
+  .title-full {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  .title-short {
+    display: none;
+  }
+
+  .metrics,
+  .controls {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Desktop: two columns ---------- */
+
+@media (min-width: 1024px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 12px 24px;
+  }
+
+  .difficulty {
+    grid-column: auto;
+  }
+
+  .main {
+    grid-template-columns: minmax(0, 65fr) minmax(0, 35fr);
+    align-items: start;
+  }
+}
+
+/* ---------- Large screens and projectors ---------- */
+
+@media (min-width: 1920px) {
+  .app {
+    padding: 0 48px 48px;
+  }
+}

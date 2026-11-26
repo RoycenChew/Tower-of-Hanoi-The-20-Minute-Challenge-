@@ -1,1 +1,193 @@
-/* components.css — buttons, message bar, modals, learning panel. (Filled in during Phase 2.) */
+/* components.css — buttons, metrics, message bar and side panels. */
+
+/* ---------- Buttons (at least 48 × 48 px: easy to tap) ---------- */
+
+.btn {
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0.4em 1em;
+  background: var(--surface);
+  border: 2px solid var(--text);
+  border-radius: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  background: #EEF1F5;
+}
+
+.btn--primary,
+.btn[aria-pressed="true"] {
+  background: var(--text);
+  color: #FFFFFF;
+}
+
+.btn--primary:hover:not(:disabled),
+.btn[aria-pressed="true"]:hover:not(:disabled) {
+  background: #24365E;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Metrics ---------- */
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5em 0.8em;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.metric dt {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+.metric dd {
+  font-size: 1.35em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Message bar ---------- */
+
+/* FIXED HEIGHT: always exactly two lines tall, even when empty, so a
+   message (or a timer warning later) can never push the board down.
+   Longer text is cut to two lines instead of growing the bar. */
+.message-bar {
+  display: flex;
+  align-items: center;
+  height: calc(2 * 1.35em + 1.2em);
+  padding: 0.6em 1em;
+  overflow: hidden;
+  line-height: 1.35;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.message-bar__text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.message-bar[data-type="error"] {
+  color: var(--error);
+  background: var(--error-bg);
+  border-color: var(--error);
+  font-weight: 600;
+}
+
+.message-bar[data-type="hint"] {
+  color: var(--hint);
+  background: var(--hint-bg);
+  border-color: var(--hint);
+  font-weight: 600;
+}
+
+.message-bar[data-type="success"] {
+  color: var(--success);
+  background: var(--success-bg);
+  border-color: var(--success);
+  font-weight: 600;
+}
+
+.message-bar[data-type="warning"] {
+  color: var(--warning);
+  background: var(--warning-bg);
+  border-color: var(--warning);
+  font-weight: 600;
+}
+
+/* ---------- Side panels (Move History, How it works) ---------- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.panel > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 48px;
+  padding: 0.5em 1em;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.panel__body {
+  display: grid;
+  gap: 0.75em;
+  padding: 0 1em 1em;
+}
+
+.panel__note {
+  font-size: 0.9em;
+  color: var(--muted);
+}
+
+/* ---------- Move log ---------- */
+
+.log {
+  max-height: 16em;
+  overflow-y: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.log li {
+  padding: 0.25em 0.5em;
+  border-left: 4px solid transparent;
+}
+
+.log li + li {
+  border-top: 1px solid #EEF0F3;
+}
+
+.log .log--invalid {
+  color: var(--error);
+  background: var(--error-bg);
+  border-left-color: var(--error);
+  font-weight: 600;
+}
+
+.log .log--undo {
+  color: var(--muted);
+  font-style: italic;
+  border-left-color: var(--peg);
+}
+
+.log .log--empty {
+  color: var(--muted);
+}
+
+/* ---------- How it works ---------- */
+
+.code-box {
+  margin: 0;
+  padding: 0.6em 0.8em;
+  font-size: 0.9em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #F0F2F5;
+  border-radius: 8px;
+}
+
+.panel__label {
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--muted);
+}

@@ -1,1 +1,110 @@
-/* base.css — colour variables, fonts and reset. (Filled in during Phase 2.) */
+/* base.css — colour variables, fonts and reset.
+
+   COLOUR CONTRAST (WCAG 2 contrast ratio, measured with the WCAG relative-
+   luminance formula; AA needs at least 4.5:1 for normal text):
+
+   Disk numbers
+     Disk 1  green  #1E9E4A  with navy  #14213D   4.60:1  (white would be only 3.47:1)
+     Disk 2  purple #7B3FC4  with white #FFFFFF   6.27:1
+     Disk 3  red    #D62839  with white #FFFFFF   4.97:1
+     Disk 4  blue   #1F6FEB  with white #FFFFFF   4.63:1
+     Disk 5  orange #F08C00  with navy  #14213D   6.43:1  (white would be only 2.48:1)
+
+   Page
+     Text      #14213D on background #F7F8FA     15.03:1
+     Pegs/base #5B5F66 on background #F7F8FA      6.04:1
+     Error     #B42318 on white                   6.57:1
+     Hint      #175CD3 on white                   5.99:1
+     Success   #067647 on white                   5.69:1
+     Warning   #B54708 on white                   5.43:1
+
+   Every disk also shows its NUMBER, so colour is never the only clue
+   (important for colour-blind players). */
+
+:root {
+  /* Disks: background + number colour */
+  --disk-1: #1E9E4A;  --disk-1-text: #14213D;
+  --disk-2: #7B3FC4;  --disk-2-text: #FFFFFF;
+  --disk-3: #D62839;  --disk-3-text: #FFFFFF;
+  --disk-4: #1F6FEB;  --disk-4-text: #FFFFFF;
+  --disk-5: #F08C00;  --disk-5-text: #14213D;
+
+  /* Page */
+  --bg: #F7F8FA;
+  --surface: #FFFFFF;
+  --text: #14213D;
+  --muted: #4A5160;
+  --line: #D5DAE1;
+  --peg: #5B5F66;
+  --glow: #FFC300;
+
+  /* Message colours: text + light background */
+  --error: #B42318;    --error-bg: #FEF3F2;
+  --hint: #175CD3;     --hint-bg: #EFF8FF;
+  --success: #067647;  --success-bg: #ECFDF3;
+  --warning: #B54708;  --warning-bg: #FFFAEB;
+
+  /* Sizes */
+  --radius: 12px;
+  --gap: clamp(10px, 1.2vw, 28px);
+  --disk-h: clamp(22px, 4vh, 56px);
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: clamp(16px, 0.6vw + 12px, 28px);
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--bg);
+}
+
+h1, h2, p, ol, ul, dl, dd {
+  margin: 0;
+}
+
+ol, ul {
+  padding: 0;
+  list-style: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+code, pre {
+  font-family: var(--mono);
+}
+
+/* Clear keyboard focus ring for every focusable element. */
+:focus-visible {
+  outline: 3px solid var(--hint);
+  outline-offset: 3px;
+}
+
+/* Hidden on screen but still read by screen readers. */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

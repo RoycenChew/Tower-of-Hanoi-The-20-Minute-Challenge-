@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tower of Hanoi against a 20-minute clock. Learn how stacks and recursion solve the puzzle.">
   <title>Tower of Hanoi: The 20-Minute Challenge!</title>
+  <!-- Inline icon (three disks), so the browser does not request a missing favicon.ico. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='11' y='6' width='10' height='6' rx='3' fill='%231E9E4A'/%3E%3Crect x='7' y='13' width='18' height='6' rx='3' fill='%237B3FC4'/%3E%3Crect x='3' y='20' width='26' height='6' rx='3' fill='%23D62839'/%3E%3C/svg%3E">
 
   <!-- All paths are relative (./) so the site works on GitHub Pages from the repo root. -->
   <link rel="stylesheet" href="./css/base.css">
@@ -12,10 +15,114 @@
   <link rel="stylesheet" href="./css/components.css">
 </head>
 <body>
-  <main>
-    <h1>Tower of Hanoi: The 20-Minute Challenge!</h1>
-    <p>Coming soon.</p>
-  </main>
+  <div class="app">
+
+    <!-- ===== Top bar: title, timer, difficulty ===== -->
+    <header class="topbar">
+      <h1 class="title">
+        <span class="title-full">Tower of Hanoi: The 20-Minute Challenge!</span>
+        <span class="title-short" aria-hidden="true">Hanoi Challenge</span>
+      </h1>
+
+      <div class="timer" id="timer" role="timer" aria-label="Time remaining">20:00</div>
+
+      <!-- Difficulty switching arrives in Phase 3. -->
+      <div class="difficulty" role="group" aria-label="Difficulty">
+        <button class="btn" type="button" data-disks="3" aria-pressed="true" disabled>3 Disks</button>
+        <button class="btn" type="button" data-disks="4" aria-pressed="false" disabled>4 Disks</button>
+        <button class="btn" type="button" data-disks="5" aria-pressed="false" disabled>5 Disks</button>
+      </div>
+    </header>
+
+    <main class="main">
+
+      <!-- ===== Left column: the game ===== -->
+      <section class="game" aria-label="Game">
+
+        <dl class="metrics">
+          <div class="metric">
+            <dt>Moves</dt>
+            <dd id="metric-moves">0</dd>
+          </div>
+          <div class="metric">
+            <dt>Minimum</dt>
+            <dd id="metric-minimum">7 (2³ − 1)</dd>
+          </div>
+          <div class="metric">
+            <dt>Hints</dt>
+            <dd id="metric-hints">0</dd>
+          </div>
+          <div class="metric">
+            <dt>Puzzles solved</dt>
+            <dd id="metric-solved">0</dd>
+          </div>
+        </dl>
+
+        <!-- Fixed height: messages never move the board. -->
+        <div class="message-bar" id="message" role="status" aria-live="polite" data-type="info">
+          <span class="message-bar__text" id="message-text">Click a peg to pick up its top disk.</span>
+        </div>
+
+        <!-- Each peg is a button covering its whole column. Disks are drawn by js/view/Board.js. -->
+        <div class="board" id="board">
+          <button class="peg" type="button" data-peg="0" aria-label="Peg A, Source">
+            <span class="peg-area"><span class="rod"></span><span class="disks"></span></span>
+            <span class="peg-label">Peg A — Source</span>
+          </button>
+          <button class="peg" type="button" data-peg="1" aria-label="Peg B, Spare">
+            <span class="peg-area"><span class="rod"></span><span class="disks"></span></span>
+            <span class="peg-label">Peg B — Spare</span>
+          </button>
+          <button class="peg" type="button" data-peg="2" aria-label="Peg C, Target">
+            <span class="peg-area"><span class="rod"></span><span class="disks"></span></span>
+            <span class="peg-label">Peg C — Target</span>
+          </button>
+        </div>
+
+        <!-- These controls are switched on in Phase 3 and Phase 5. -->
+        <div class="controls">
+          <button class="btn" type="button" id="btn-hint" disabled>Hint</button>
+          <button class="btn" type="button" id="btn-undo" disabled>Undo</button>
+          <button class="btn" type="button" id="btn-restart" disabled>Restart Puzzle</button>
+          <button class="btn" type="button" id="btn-learn" disabled>Learning Mode</button>
+        </div>
+      </section>
+
+      <!-- ===== Right column: move history and explanation ===== -->
+      <aside class="side" aria-label="Move history and explanation">
+
+        <details class="panel" id="panel-history">
+          <summary><span>Move History (<span id="log-count">0</span>)</span></summary>
+          <div class="panel__body">
+            <ol class="log" id="log"></ol>
+          </div>
+        </details>
+
+        <details class="panel" id="panel-how">
+          <summary>How it works</summary>
+          <div class="panel__body">
+            <p class="panel__note">
+              Every peg is a <strong>stack</strong>: you can only touch its top disk
+              (Last In, First Out). Moving a disk is two stack operations:
+              <code>pop()</code> from one peg, then <code>push()</code> onto another.
+            </p>
+
+            <p class="panel__label">Last move</p>
+            <pre class="code-box" id="how-last">Make a move to see the stack operations.</pre>
+
+            <p class="panel__label">Stacks now (bottom → top)</p>
+            <pre class="code-box" id="how-stacks">A: [3, 2, 1]
+B: []
+C: []</pre>
+
+            <p class="panel__note" id="how-minimum">Minimum for 3 disks: 2³ − 1 = 7 moves.</p>
+          </div>
+        </details>
+      </aside>
+    </main>
+  </div>
+
+  <noscript>This game needs JavaScript. Please turn it on and reload the page.</noscript>
 
   <!-- type="module" lets us use import/export without any build step. -->
   <script type="module" src="./js/main.js"></script>
