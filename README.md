@@ -58,12 +58,13 @@ js/model/                     pure logic, no DOM (runs in Node tests)
 
 js/controller/
   GameController.js           screen states, input gate, challenge flow, Time's up sequence
-  Input.js                    browser events -> controller calls
-  AnimationQueue.js           move animations (Phase 4)
+  Input.js                    clicks, drag-and-drop (Pointer Events) and keyboard shortcuts
+  AnimationQueue.js           runs move animations one at a time (busy / clear)
   LearningMode.js             step-by-step walkthrough (Phase 5)
 
 js/view/
-  Board.js                    draws pegs and disks, hint highlight, shake
+  Board.js                    draws pegs and disks; move, drag and return animations
+  Confetti.js                 confetti when a puzzle is solved
   UIOverlay.js                timer, metrics, move log, "How it works"
   MessageBar.js               message priority: timer warnings always get 4 s
   Modals.js                   welcome card, victory, Time's up, final summary
@@ -74,8 +75,11 @@ js/view/
 tests/                        unit tests (npm test)
   stack, rules, gamestate, solver, timer, stats, eventbus   model
   controller                  click-to-select rules
-  challenge                   start, hint/undo/restart/difficulty, victory, Time's up
+  challenge                   start, hint/undo/restart/difficulty, victory, Time's up,
+                              animations, drag-and-drop, timeout mid-drag / mid-animation
   messagebar                  warning priority
+  animationqueue              one animation at a time, clear()
+  input                       keyboard shortcuts and when they are ignored
 docs/                         assignment brief (kept local, not in git)
 ```
 

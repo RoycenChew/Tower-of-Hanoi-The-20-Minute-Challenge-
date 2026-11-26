@@ -1,30 +1,105 @@
 // Input.js — turns browser events into controller calls.
 //
-// Every button and peg click goes through here, so this file is the full
-// list of "what the player can do". The controller decides if it is allowed.
-// Phase 4 adds drag-and-drop and keyboard shortcuts here.
+// Every way the player can act goes through here: clicks, drag-and-drop and
+// the keyboard. This file never decides whether an action is allowed; the
+// controller does that.
+
+/** A press must move this far before it counts as a drag (less = a click). */
+export const DRAG_THRESHOLD_PX = 6;
+
+/**
+ * Which keyboard shortcut does this key press mean? A pure function (no DOM
+ * access), so it can be unit-tested.
+ *
+ * Shortcuts are IGNORED while typing in a text box, while a dialog is open
+ * and while the welcome card is showing.
+ *
+ * @param {{key: string, ctrlKey?: boolean, altKey?: boolean, metaKey?: boolean,
+ *          repeat?: boolean, target?: object}} event
+ * @param {{dialogOpen?: boolean, welcomeVisible?: boolean}} context
+ * @returns {null | {action: string, peg?: number}}
+ */
+export function shortcutFor(event, { dialogOpen = false, welcomeVisible = false } = {}) {
+  if (dialogOpen || welcomeVisible) return null;
+  const target = event.target;
+  if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) {
+    return null;
+  }
+  if (event.altKey || event.metaKey || event.repeat) return null;
+
+  const key = event.key.toLowerCase();
+  if (event.ctrlKey) {
+    // Ctrl+Z is our only Ctrl shortcut; Ctrl+R etc. stay with the browser.
+    return key === 'z' ? { action: 'undo' } : null;
+  }
+  switch (key) {
+    case 'a': case '1': return { action: 'peg', peg: 0 };
+    case 'b': case '2': return { action: 'peg', peg: 1 };
+    case 'c': case '3': return { action: 'peg', peg: 2 };
+    case 'escape': return { action: 'deselect' };
+    case 'u': return { action: 'undo' };
+    case 'h': return { action: 'hint' };
+    case 'r': return { action: 'restart' };
+    default: return null;
+  }
+}
 
 export class Input {
+  #doc;
+  #board;
+  #controller;
+  /** The drag in progress: { pointerId, peg, disk, x0, y0, started } or null. */
+  #drag = null;
+  /** After a real drag, the browser still fires a "click"; swallow it once. */
+  #suppressClick = false;
+
   /**
    * @param {Document} doc
-   * @param {Board} board            gives us the three peg buttons
+   * @param {Board} board
    * @param {GameController} controller
    */
   constructor(doc, board, controller) {
+    this.#doc = doc;
+    this.#board = board;
+    this.#controller = controller;
     const onClick = (id, action) => doc.getElementById(id).addEventListener('click', action);
 
-    // Pegs (click, or Enter/Space because they are real <button>s).
+    // ---- Pegs: click (or Enter/Space, because they are real <button>s) ----
     board.pegButtons.forEach((button, peg) => {
       button.addEventListener('click', () => controller.handlePegClick(peg));
     });
 
-    // Welcome card: a <form>, so pressing Enter in the nickname box also starts.
+    // ---- Drag-and-drop (Pointer Events: mouse, pen and touch) ----
+    const root = board.element;
+    root.addEventListener('pointerdown', (e) => this.#onPointerDown(e));
+    root.addEventListener('pointermove', (e) => this.#onPointerMove(e));
+    root.addEventListener('pointerup', (e) => this.#onPointerUp(e));
+    root.addEventListener('pointercancel', (e) => this.#onPointerCancel(e));
+    // On touch screens the browser first captures the pointer on the touched
+    // DISK; when we move the capture to the board, the disk fires
+    // lostpointercapture, which bubbles up here. Only the BOARD losing its
+    // capture means the drag really ended.
+    root.addEventListener('lostpointercapture', (e) => {
+      if (e.target === root) this.#onPointerCancel(e);
+    });
+    root.addEventListener('click', (e) => {
+      if (this.#suppressClick) {
+        this.#suppressClick = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, true); // capture phase: runs before the peg's own click listener
+
+    // When time runs out mid-drag, the controller calls this.
+    controller.setCancelDrag(() => this.cancelDrag());
+
+    // ---- Welcome card: a <form>, so Enter in the nickname box also starts ----
     doc.getElementById('welcome-form').addEventListener('submit', (event) => {
       event.preventDefault();
       controller.start(doc.getElementById('nickname').value);
     });
 
-    // Controls and difficulty.
+    // ---- Controls and difficulty ----
     onClick('btn-hint', () => controller.hint());
     onClick('btn-undo', () => controller.undo());
     onClick('btn-restart', () => controller.restart());
@@ -32,12 +107,127 @@ export class Input {
       button.addEventListener('click', () => controller.setDifficulty(Number(button.dataset.disks)));
     });
 
-    // Victory modal.
+    // ---- Victory modal ----
     onClick('btn-next-level', () => controller.nextLevel());
     onClick('btn-play-again', () => controller.playAgain());
     doc.getElementById('victory').addEventListener('close', () => controller.closeVictory());
 
-    // Final summary: a brand-new challenge means a brand-new page (and clock).
+    // ---- Final summary: a brand-new challenge means a brand-new page (and clock) ----
     onClick('btn-new-challenge', () => doc.location.reload());
+
+    // ---- Keyboard ----
+    doc.addEventListener('keydown', (event) => this.#onKeyDown(event));
+  }
+
+  /** Abort a drag: the disk goes back under normal control (no counting). */
+  cancelDrag() {
+    if (!this.#drag) return;
+    const { pointerId, started } = this.#drag;
+    this.#drag = null;
+    if (started) {
+      this.#board.clearDrag();
+      if (this.#board.element.hasPointerCapture(pointerId)) {
+        this.#board.element.releasePointerCapture(pointerId);
+      }
+    }
+  }
+
+  // ===================== Drag-and-drop =====================
+
+  #onPointerDown(e) {
+    this.#suppressClick = false;
+    if (e.button !== 0 || this.#drag) return;
+    const diskEl = e.target.closest('.disk');
+    if (!diskEl) return; // pressing an empty part of a peg is just a click
+    this.#drag = {
+      pointerId: e.pointerId,
+      peg: Number(diskEl.closest('.peg').dataset.peg),
+      disk: Number(diskEl.dataset.disk),
+      x0: e.clientX,
+      y0: e.clientY,
+      started: false,
+    };
+  }
+
+  #onPointerMove(e) {
+    const drag = this.#drag;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const dx = e.clientX - drag.x0;
+    const dy = e.clientY - drag.y0;
+
+    if (!drag.started) {
+      // Under 6 px it is still a click; the normal click handler will run.
+      if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+      // The controller checks "top disk only", Time's up, busy, ...
+      if (!this.#controller.beginDrag(drag.peg, drag.disk)) {
+        this.#drag = null;
+        this.#suppressClick = true; // this press was a refused drag, not a click
+        return;
+      }
+      drag.started = true;
+      this.#suppressClick = true;
+      // Capture: keep receiving this pointer's events even outside the board.
+      this.#board.element.setPointerCapture(e.pointerId);
+      this.#board.startDrag(drag.peg);
+    }
+
+    this.#board.dragTo(dx, dy);
+    const target = this.#board.pegAt(e.clientX, e.clientY);
+    if (target === null || target === drag.peg) {
+      this.#board.setDropHint(null, false);
+    } else {
+      this.#board.setDropHint(target, this.#controller.previewDrop(drag.peg, target));
+    }
+  }
+
+  #onPointerUp(e) {
+    // The browser fires its "click" right after pointerup. If it fires none,
+    // make sure the flag cannot eat a later, unrelated click (e.g. Enter key).
+    if (this.#suppressClick) setTimeout(() => { this.#suppressClick = false; }, 0);
+
+    const drag = this.#drag;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    this.#drag = null;
+    if (!drag.started) return; // a click: handled by the peg's click listener
+
+    const target = this.#board.pegAt(e.clientX, e.clientY);
+    const dropRect = this.#board.dragRect();
+    this.#board.clearDrag();
+    if (target === null || target === drag.peg) {
+      this.#controller.cancelDrop(drag.peg, dropRect); // back quietly, not counted
+    } else {
+      this.#controller.dropDisk(drag.peg, target, dropRect); // a real move attempt
+    }
+  }
+
+  #onPointerCancel(e) {
+    const drag = this.#drag;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    this.#drag = null;
+    if (!drag.started) return;
+    const dropRect = this.#board.dragRect();
+    this.#board.clearDrag();
+    this.#controller.cancelDrop(drag.peg, dropRect);
+  }
+
+  // ===================== Keyboard =====================
+
+  #onKeyDown(event) {
+    const shortcut = shortcutFor(event, {
+      dialogOpen: this.#doc.querySelector('dialog[open]') !== null,
+      welcomeVisible: !this.#doc.getElementById('welcome').hidden,
+    });
+    if (!shortcut) return;
+    event.preventDefault();
+
+    const c = this.#controller;
+    switch (shortcut.action) {
+      case 'peg': c.handlePegClick(shortcut.peg); break;
+      case 'deselect': c.cancelSelection(); break;
+      case 'undo': c.undo(); break;
+      case 'hint': c.hint(); break;
+      case 'restart': c.requestRestartByKey(); break;
+      default: break;
+    }
   }
 }

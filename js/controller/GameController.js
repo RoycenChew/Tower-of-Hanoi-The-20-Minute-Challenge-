@@ -9,9 +9,13 @@
 // THE TIMER IS NEVER PAUSED: no action here (hint, undo, restart, difficulty,
 // victory) calls anything on the timer except start() once. The timer only
 // tells US things, through events (timer:tick, timer:warn5, ...).
+//
+// STATE FIRST, PICTURE SECOND: every move changes the model at once; the
+// animation is queued afterwards and only shows what already happened.
 
-import { MESSAGES, describeMove } from '../model/Rules.js';
+import { MESSAGES, describeMove, validateMove } from '../model/Rules.js';
 import { solve } from '../model/Solver.js';
+import { AnimationQueue } from './AnimationQueue.js';
 
 /** Screen states (section 5.1). */
 export const Screen = Object.freeze({
@@ -23,7 +27,9 @@ export const Screen = Object.freeze({
 });
 
 export const DIFFICULTIES = [3, 4, 5];
-export const SUMMARY_DELAY_MS = 1500; // "Time's up!" shows alone this long, then the summary
+export const SUMMARY_DELAY_MS = 1500;  // "Time's up!" shows alone this long, then the summary
+export const RESTART_KEY_WINDOW_MS = 2000; // R must be pressed twice within this time
+export const PRESS_R_AGAIN = 'Press R again to restart.';
 
 export class GameController {
   #game;
@@ -32,7 +38,7 @@ export class GameController {
   #modals;
   #stats;
   #timer;
-  #isBusy;
+  #queue;
   #now;
   #setTimeout;
   #stopLearning;
@@ -40,6 +46,10 @@ export class GameController {
 
   /** When the current puzzle started (for "time for this puzzle"). */
   #puzzleStartedAt = null;
+  /** "Please wait..." is shown at most once per animation. */
+  #busyNoticeShown = false;
+  /** When R was first pressed (keyboard restart needs two presses). */
+  #restartArmedAt = null;
 
   screen = Screen.WELCOME;
   /** null, or the peg (0/1/2) whose top disk is lifted. */
@@ -57,13 +67,13 @@ export class GameController {
    * @param {Modals} deps.modals
    * @param {Stats} deps.stats
    * @param {ChallengeTimer} deps.timer
-   * @param {() => boolean} [deps.isBusy]   true while an animation plays (Phase 4)
+   * @param {AnimationQueue} [deps.queue]    runs move animations one at a time
    * @param {() => void} [deps.stopLearning] stops Learning Mode autoplay (Phase 5)
-   * @param {() => void} [deps.cancelDrag]   cancels a drag in progress (Phase 4)
+   * @param {() => void} [deps.cancelDrag]   cancels a drag in progress (set by Input)
    */
   constructor({
     bus, game, board, ui, modals, stats, timer,
-    isBusy = () => false,
+    queue = new AnimationQueue(),
     stopLearning = () => {},
     cancelDrag = () => {},
     now = () => Date.now(),
@@ -75,7 +85,7 @@ export class GameController {
     this.#modals = modals;
     this.#stats = stats;
     this.#timer = timer;
-    this.#isBusy = isBusy;
+    this.#queue = queue;
     this.#stopLearning = stopLearning;
     this.#cancelDrag = cancelDrag;
     this.#now = now;
@@ -93,6 +103,11 @@ export class GameController {
     bus.on('timer:warn5', () => this.#warn('warn5', '5 minutes remaining!', 'warning'));
     bus.on('timer:warn1', () => this.#warn('warn1', 'Final minute!', 'error'));
     bus.on('timer:expired', () => this.handleExpired());
+  }
+
+  /** Input.js registers how to cancel a drag (needed when time runs out). */
+  setCancelDrag(fn) {
+    this.#cancelDrag = fn;
   }
 
   /** Redraw the board and the panels from the model. */
@@ -132,7 +147,9 @@ export class GameController {
     this.screen = Screen.TIME_UP;
     // 2. Stop Learning Mode autoplay.
     this.#stopLearning();
-    // 3. Finish any running animation, so the board shows the real state.
+    // 3. Empty the animation queue and finish running animations, so the
+    //    board shows the real state at once.
+    this.#queue.clear();
     this.#board.finishAnimations();
     // 4. Cancel a drag in progress, and drop a lifted disk back onto its peg.
     this.#cancelDrag();
@@ -149,7 +166,7 @@ export class GameController {
     }, SUMMARY_DELAY_MS);
   }
 
-  // ===================== Player actions =====================
+  // ===================== Player actions: clicks =====================
 
   /**
    * Click-to-select (section 5.2): first click picks up a top disk,
@@ -167,9 +184,69 @@ export class GameController {
     } else if (peg === this.selectedPeg) {
       this.#deselect();
     } else {
-      this.#moveSelectedTo(peg);
+      // Measure the disk while it is still LIFTED, so the animation starts
+      // from where the player actually sees it.
+      const from = this.selectedPeg;
+      this.#makeMove(from, peg, this.#board.measureTopDisk(from), { dropped: false });
     }
   }
+
+  /** Esc: put a lifted disk back down. */
+  cancelSelection() {
+    if (this.selectedPeg !== null) this.#deselect();
+  }
+
+  // ===================== Player actions: drag-and-drop =====================
+
+  /**
+   * A drag is starting on `disk` of `peg`. Allowed only for a TOP disk.
+   * @returns {boolean} true if the drag may go on
+   */
+  beginDrag(peg, disk) {
+    if (!this.#inputAllowed()) return false;
+    if (this.#game.solved) {
+      this.#ui.showMessage(MESSAGES.PUZZLE_SOLVED, 'info');
+      return false;
+    }
+    // LIFO: only the disk that peek() returns can be taken off a peg.
+    if (this.#game.pegs[peg].peek() !== disk) {
+      this.#ui.showMessage(MESSAGES.TOP_ONLY, 'error');
+      return false;
+    }
+    if (this.selectedPeg !== null) {
+      this.selectedPeg = null;
+      this.render();
+    }
+    this.#ui.clearMessage();
+    return true;
+  }
+
+  /** While dragging: would dropping on `to` be legal? (Only looks; changes nothing.) */
+  previewDrop(from, to) {
+    return validateMove(this.#game.pegs, from, to).ok;
+  }
+
+  /**
+   * The disk was dropped on peg `to`. This is a REAL move attempt, exactly
+   * like two clicks: an illegal drop is logged and counted as invalid.
+   * @param {DOMRect|null} dropRect  where the disk was let go
+   */
+  dropDisk(from, to, dropRect) {
+    if (!this.#inputAllowed()) {
+      this.render(); // e.g. time ran out mid-drag: just show the real board
+      return;
+    }
+    this.#makeMove(from, to, dropRect, { dropped: true });
+  }
+
+  /** Dropped outside every peg (or on its own peg): it goes back quietly, not counted. */
+  cancelDrop(peg, dropRect) {
+    this.render();
+    if (this.locked) return;
+    this.#animate(() => this.#board.animateReturn(peg, dropRect));
+  }
+
+  // ===================== Player actions: buttons and keys =====================
 
   /** Suggest the best next move from the current position. Moves nothing. */
   hint() {
@@ -187,7 +264,7 @@ export class GameController {
     this.#ui.showMessage(`Hint: Move ${describeMove(move)}`, 'hint');
   }
 
-  /** Reverse the last valid move. */
+  /** Reverse the last valid move (animated). */
   undo() {
     if (!this.#inputAllowed()) return;
     if (this.#game.solved) {
@@ -197,17 +274,36 @@ export class GameController {
       return;
     }
     this.selectedPeg = null;
+    const last = this.#game.history.peek(); // the move about to be undone
+    const fromRect = last ? this.#board.measureTopDisk(last.to) : null;
     const result = this.#game.undo(); // "Nothing to undo." arrives as move:invalid
     if (result.ok) {
       this.#stats.recordUndo();
       this.#ui.clearMessage();
+      this.#animate(() => this.#board.animateMove(result.move.disk, fromRect));
     }
   }
 
   /** Same difficulty, fresh puzzle. The challenge clock keeps running. */
   restart() {
     if (!this.#inputAllowed()) return;
+    this.#restartArmedAt = null;
     this.#newPuzzle(this.#game.diskCount);
+  }
+
+  /**
+   * The R key restarts only when pressed TWICE within 2 seconds, so a stray
+   * key press cannot wipe out a puzzle. (The Restart button is one click.)
+   */
+  requestRestartByKey() {
+    if (!this.#inputAllowed()) return;
+    const now = this.#now();
+    if (this.#restartArmedAt !== null && now - this.#restartArmedAt <= RESTART_KEY_WINDOW_MS) {
+      this.restart();
+    } else {
+      this.#restartArmedAt = now;
+      this.#ui.showMessage(PRESS_R_AGAIN, 'info');
+    }
   }
 
   /** Switch to 3, 4 or 5 disks. The challenge clock keeps running. */
@@ -240,16 +336,38 @@ export class GameController {
    * false if input is not allowed right now. Order matters: Time's up first.
    */
   #inputAllowed() {
-    let blocked = null;
-    if (this.locked) blocked = 'TIME_UP';
-    else if (this.screen === Screen.WELCOME) blocked = 'NOT_STARTED';
-    else if (this.#isBusy()) blocked = 'BUSY';
-
-    if (blocked) {
-      this.#ui.showMessage(MESSAGES[blocked], blocked === 'BUSY' ? 'info' : 'error');
+    if (this.locked) {
+      this.#ui.showMessage(MESSAGES.TIME_UP, 'error');
+      return false;
+    }
+    if (this.screen === Screen.WELCOME) {
+      this.#ui.showMessage(MESSAGES.NOT_STARTED, 'error');
+      return false;
+    }
+    if (this.#queue.busy) {
+      // Refused, but the message is shown only once per animation so it
+      // does not flash on every rapid click.
+      if (!this.#busyNoticeShown) {
+        this.#busyNoticeShown = true;
+        this.#ui.showMessage(MESSAGES.BUSY, 'info');
+      }
       return false;
     }
     return true;
+  }
+
+  /**
+   * Queue an animation. When it has finished, redraw from the model as a
+   * safety net, then run `after` — unless time ran out meanwhile (the
+   * Time's up sequence owns the screen from then on).
+   */
+  #animate(animation, after = () => {}) {
+    this.#busyNoticeShown = false; // a new animation may show "Please wait..." once
+    this.#queue.add(animation).then(() => {
+      if (this.locked) return;
+      this.render();
+      after();
+    });
   }
 
   #warn(level, text, type) {
@@ -280,29 +398,44 @@ export class GameController {
     this.#ui.clearMessage();
   }
 
-  #moveSelectedTo(to) {
-    const from = this.selectedPeg;
+  /**
+   * One move attempt, from a click or a drop.
+   * @param {DOMRect|null} fromRect  where the disk is drawn now (lifted or dropped)
+   * @param {{dropped: boolean}} how  a failed drop animates back; a failed click shakes
+   */
+  #makeMove(from, to, fromRect, { dropped }) {
     // Deselect FIRST, so the redraw caused by the move shows no lifted disk.
     this.selectedPeg = null;
 
-    // The model validates and either moves (state:changed) or refuses
-    // (move:invalid). Our listeners redraw in both cases.
+    // 1. The model validates and either moves (state:changed) or refuses
+    //    (move:invalid). Our listeners redraw in both cases — instantly.
     const result = this.#game.tryMove(from, to);
 
     if (!result.ok) {
       this.#stats.recordInvalid();
-      this.#board.shakeTopDisk(from); // the disk "drops back" with a shake
+      if (dropped) this.#animate(() => this.#board.animateReturn(from, fromRect));
+      else this.#board.shakeTopDisk(from); // the disk "drops back" with a shake
       return;
     }
+
     this.#stats.recordMove();
-    if (result.solved) {
-      this.#onSolved();
-    } else {
-      this.#ui.clearMessage();
-    }
+    this.#ui.pulseMoves();
+    const victory = result.solved ? this.#recordSolved() : null;
+    if (!victory) this.#ui.clearMessage();
+
+    // 2. The picture catches up: animate from the old place to the new one.
+    //    The victory modal waits until the disk has landed.
+    this.#animate(
+      () => this.#board.animateMove(result.move.disk, fromRect),
+      () => { if (victory && this.screen === Screen.VICTORY) this.#modals.showVictory(victory); },
+    );
   }
 
-  #onSolved() {
+  /**
+   * The puzzle is solved: count it NOW (the model already says so), even if
+   * time runs out before the animation ends. Returns the victory modal data.
+   */
+  #recordSolved() {
     const game = this.#game;
     const n = game.diskCount;
     const rating = this.#stats.recordSolved({
@@ -314,14 +447,14 @@ export class GameController {
     this.screen = Screen.VICTORY;
     this.render(); // "Puzzles solved" metric
     this.#ui.showMessage(`Puzzle solved in ${game.moveCount} moves! The minimum is ${game.minMoves()}.`, 'success');
-    this.#modals.showVictory({
+    return {
       ...rating,
       diskCount: n,
       moves: game.moveCount,
       hints: game.hintsUsed,
       nextLevel: n < 5 ? n + 1 : null, // null after 5 disks: every level cleared
       optimal: solve(n).map(describeMove),
-    });
+    };
   }
 
   /** Fresh puzzle with n disks. Stats totals and the challenge clock are untouched. */

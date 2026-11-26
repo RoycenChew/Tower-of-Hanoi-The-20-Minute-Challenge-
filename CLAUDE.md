@@ -34,10 +34,18 @@ The full spec lives in `docs/` (plan + assignment PDF:
 
 ## File structure
 - `js/model/`: Stack, Rules, GameState, Solver, ChallengeTimer, Stats, EventBus (no DOM).
-- `js/controller/`: GameController (screen states, single input gate `#inputAllowed()`, Time's up sequence), Input (all browser events), AnimationQueue (Phase 4), LearningMode (Phase 5).
-- `js/view/`: Board, UIOverlay, MessageBar (warning priority), Modals (welcome, victory, Time's up, summary), DebugPanel (?debug=1 only, dynamic import), LearningPanel (Phase 5), Sound (Phase 6).
-- `tests/`: stack, rules, gamestate, solver, timer, stats, eventbus, controller, challenge, messagebar.
-- Report test IDs used in test names: TC-01 empty source, TC-02 larger on smaller, TC-04 undo after 5 moves, TC-14 Hint, TC-16 difficulty change, TC-18 Restart.
+- `js/controller/`: GameController (screen states, single input gate `#inputAllowed()`, Time's up sequence, drag API), Input (clicks, Pointer Events drag, keyboard; `shortcutFor()` is pure), AnimationQueue (one job at a time, `busy`, `clear()`), LearningMode (Phase 5).
+- `js/view/`: Board (render + FLIP move/return animations + drag visuals), UIOverlay, MessageBar (warning priority), Modals (welcome, victory, Time's up, summary), Confetti, DebugPanel (?debug=1 only, dynamic import), LearningPanel (Phase 5), Sound (Phase 6).
+- `tests/`: stack, rules, gamestate, solver, timer, stats, eventbus, controller, challenge, messagebar, animationqueue, input.
+- Report test IDs used in test names: TC-01 empty source, TC-02 larger on smaller, TC-04 undo after 5 moves, TC-14 Hint, TC-16 difficulty change, TC-18 Restart, TC-22 timeout during drag, TC-23 timeout during animation, TC-25 rapid clicks during animation.
+
+## Animation and input rules (Phase 4)
+- Gameplay move animation: `GAME_TIMING` lift 80 + slide 140 + drop 80 = 300 ms. Learning Mode uses `LEARN_TIMING` (550 ms).
+- Animate only `transform` / `translate` / `opacity`.
+- While an animation runs, input is refused with BUSY; "Please wait..." shows at most once per animation.
+- The R shortcut needs two presses within 2 s; the Restart button is one click.
+- `touch-action: none` on disks only. On touch, ignore `lostpointercapture` unless its target is the board itself (the disk's implicit capture is handed over when the drag starts).
+- Reduced motion: no animation, moves still happen instantly.
 
 ## Conventions
 - Pegs indexed 0, 1, 2 = A, B, C. Disks are integers: 1 = smallest, n = largest.

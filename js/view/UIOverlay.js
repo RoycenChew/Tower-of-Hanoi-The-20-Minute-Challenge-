@@ -4,6 +4,7 @@
 import { PEG_LETTERS } from '../model/Rules.js';
 import { ChallengeTimer } from '../model/ChallengeTimer.js';
 import { MessageBar } from './MessageBar.js';
+import { reducedMotion } from './Board.js';
 
 export { DEFAULT_PROMPT } from './MessageBar.js';
 
@@ -84,6 +85,15 @@ export class UIOverlay {
 
     this.#el.howMinimum.textContent =
       `Minimum for ${n} disks: ${power} − 1 = ${snapshot.minMoves} moves.`;
+  }
+
+  /** A short "pop" of the Moves counter after a valid move (transform only). */
+  pulseMoves() {
+    if (reducedMotion()) return;
+    this.#el.moves.animate(
+      [{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }],
+      { duration: 250, easing: 'ease-out' },
+    );
   }
 
   // ----- Timer -----

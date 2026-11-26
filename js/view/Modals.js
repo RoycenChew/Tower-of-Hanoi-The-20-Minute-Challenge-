@@ -10,6 +10,7 @@
 
 import { ChallengeTimer } from '../model/ChallengeTimer.js';
 import { shareText } from '../model/Stats.js';
+import { launchConfetti } from './Confetti.js';
 const DIFFICULTIES = [3, 4, 5];
 const SUPERSCRIPT = { 3: '³', 4: '⁴', 5: '⁵' };
 
@@ -109,6 +110,7 @@ export class Modals {
 
     this.#el.victory.showModal();
     (info.nextLevel === null ? again : next).focus();
+    launchConfetti(this.#el.victory); // inside the dialog, so it shows above the backdrop
   }
 
   /** Close the victory modal (if open). */

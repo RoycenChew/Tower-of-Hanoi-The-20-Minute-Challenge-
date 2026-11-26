@@ -479,3 +479,18 @@
   min-height: 40px;
   font-size: 14px;
 }
+
+/* ---------- Confetti (fixed layer, never blocks clicks) ---------- */
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+/* The Moves number scales from its left edge when it pulses. */
+#metric-moves {
+  transform-origin: left center;
+}

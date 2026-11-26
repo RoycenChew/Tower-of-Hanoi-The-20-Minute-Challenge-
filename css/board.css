@@ -32,7 +32,6 @@
   position: relative;
   height: calc(var(--disk-h) * 6.6);
   border-radius: 10px;
-  transition: background-color 150ms ease;
 }
 
 .peg:hover .peg-area {
@@ -96,7 +95,35 @@
   font-weight: 800;
   line-height: 1;
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
-  transition: transform 150ms ease, box-shadow 150ms ease;
+  /* Only transform is ever animated (smooth on cheap phones). */
+  transition: transform 120ms ease;
+  /* Disks are the drag handles: a swipe that starts ON a disk drags it.
+     Everywhere else on the board, a swipe still scrolls the page. */
+  touch-action: none;
+  cursor: grab;
+}
+
+/* While moving or being dragged, a disk is drawn above the other pegs. */
+.disk.is-moving,
+.disk.is-dragging {
+  position: relative;
+  z-index: 10;
+}
+
+.disk.is-dragging {
+  transition: none; /* follow the finger exactly */
+  cursor: grabbing;
+}
+
+/* Drop targets while dragging: green = legal, red = not allowed. */
+.peg-area.drop-ok {
+  outline: 3px solid var(--success);
+  outline-offset: -3px;
+}
+
+.peg-area.drop-bad {
+  outline: 3px solid var(--error);
+  outline-offset: -3px;
 }
 
 .disk[data-disk="1"] { background: var(--disk-1); color: var(--disk-1-text); }
@@ -122,14 +149,26 @@
 
 /* ---------- Hint: disk and target peg pulse blue (3 × 1 s) ---------- */
 
+/* The glow is a separate layer whose OPACITY pulses (opacity is cheap to
+   animate; animating box-shadow itself would repaint every frame). */
 @keyframes hint-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px var(--hint); }
-  50% { box-shadow: 0 0 0 3px var(--hint), 0 0 18px 8px rgba(23, 92, 211, 0.55); }
+  50% { opacity: 1; }
 }
 
 .disk.is-hint {
-  animation: hint-pulse 1s ease-in-out 3;
+  position: relative;
   box-shadow: 0 0 0 3px var(--hint);
+}
+
+.disk.is-hint::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  box-shadow: 0 0 16px 6px rgba(23, 92, 211, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  animation: hint-pulse 1s ease-in-out 3;
 }
 
 .peg-area.is-hint-target {
@@ -163,8 +202,9 @@
     transition: none;
   }
 
-  .disk.is-hint {
+  .disk.is-hint::after {
     animation: none;
+    opacity: 1; /* a steady glow instead of a pulse */
   }
 
   .is-shaking {

@@ -22,7 +22,12 @@ function setup(options = {}) {
     shakeTopDisk: (peg) => calls.push(['shakeTopDisk', peg]),
     highlightHint: () => {},
     finishAnimations: () => {},
+    measureTopDisk: () => null,
+    animateMove: async () => {},
+    animateReturn: async () => {},
   };
+  // Runs each animation at once and is never busy (animation timing is tested in challenge.test.js).
+  const queue = { busy: false, add: (job) => Promise.resolve(job()).then(() => true), clear() {} };
   const ui = {
     message: null,
     lastMove: undefined,
@@ -33,11 +38,12 @@ function setup(options = {}) {
     announce() {},
     setTime() {},
     setTimerLevel() {},
+    pulseMoves() {},
   };
   const modals = { hideWelcome() {}, showVictory() {}, closeAll() {}, showTimeUp() {}, showSummary() {} };
   const timer = new ChallengeTimer(bus, { now: () => 0, setInterval: () => 1, clearInterval: () => {} });
   const controller = new GameController({
-    bus, game, board, ui, modals, stats: new Stats(), timer, now: () => 0, ...options,
+    bus, game, board, ui, modals, stats: new Stats(), timer, queue, now: () => 0, ...options,
   });
   controller.start();
   const click = (...pegs) => pegs.forEach((peg) => controller.handlePegClick(peg));
@@ -117,7 +123,8 @@ test('when locked (time is up), every click returns TIME_UP and changes nothing'
 });
 
 test('while busy (animation playing), clicks return BUSY', () => {
-  const { controller, ui, click } = setup({ isBusy: () => true });
+  const busyQueue = { busy: true, add: () => Promise.resolve(true), clear() {} };
+  const { controller, ui, click } = setup({ queue: busyQueue });
   click(0);
   assert.equal(ui.message.text, 'Please wait for the current move to finish.');
   assert.equal(controller.selectedPeg, null);
