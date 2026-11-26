@@ -143,6 +143,11 @@ export class Input {
     doc.querySelectorAll('[data-learn-disks]').forEach((button) => {
       button.addEventListener('click', () => learning.setDiskCount(Number(button.dataset.learnDisks)));
     });
+    // Step list: one listener for all steps (they are re-drawn for 3, 4 or 5 disks).
+    doc.getElementById('learn-steps').addEventListener('click', (event) => {
+      const step = event.target.closest('[data-step]');
+      if (step) learning.seek(Number(step.dataset.step));
+    });
 
     // ---- Final summary: a brand-new challenge means a brand-new page (and clock) ----
     onClick('btn-new-challenge', () => doc.location.reload());

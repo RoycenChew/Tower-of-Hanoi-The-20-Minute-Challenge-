@@ -136,6 +136,10 @@ export class GameController {
       lastMove: this.#game.history.peek(),
       controlsEnabled: !this.locked && this.screen !== Screen.WELCOME,
       puzzlesSolved: this.#stats.puzzlesCompleted,
+      // Best ever for this level (null = none yet); undefined when nothing can be saved.
+      personalRecord: this.#prefs?.available
+        ? (normalizeBests(this.#prefs.get('bests')).levels[snapshot.diskCount] ?? null)
+        : undefined,
     });
   }
 

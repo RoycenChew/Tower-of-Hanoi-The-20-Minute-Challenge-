@@ -1,78 +1,245 @@
-/* components.css — buttons, metrics, message bar and side panels. */
+/* components.css — buttons, cards, metrics, message bar, side panels,
+   welcome card, pop-ups, Learning Mode.
 
-/* ---------- Buttons (at least 48 × 48 px: easy to tap) ---------- */
+   Visual style: white cards with a hard dark shadow underneath, and chunky
+   buttons that "press down" when clicked. */
+
+/* ===================== Building blocks ===================== */
+
+.card {
+  background: var(--surface);
+  border: var(--line-w) solid rgba(25, 28, 30, 0.12);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card__overline {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.78em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: 1.1em;
+  font-weight: 700;
+}
+
+.card__title .icon,
+.panel > summary .icon {
+  color: var(--primary);
+}
+
+.chip {
+  padding: 0.15em 0.55em;
+  font-family: var(--mono);
+  font-size: 0.75em;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--surface-low);
+  border-radius: 6px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.4em 0.9em;
+  font-weight: 700;
+  color: #131B2E;
+  background: var(--secondary-soft);
+  border-radius: 12px;
+}
+
+/* ===================== Buttons (at least 48 × 48 px) ===================== */
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
   min-width: 48px;
   min-height: 48px;
   padding: 0.4em 1em;
-  background: var(--surface);
-  border: var(--btn-border) solid var(--text);
-  border-radius: 10px;
   font-weight: 700;
   line-height: 1.2;
+  color: var(--text);
+  background: var(--surface);
+  border: var(--btn-border) solid var(--ink);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
   cursor: pointer;
+  /* The press is a 2 px transform: cheap, and the layout never moves. */
+  transition: transform 80ms ease;
 }
 
 .btn:hover:not(:disabled) {
-  background: #EEF1F5;
+  background: #EEF0FF;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
 }
 
 .btn--primary,
 .btn[aria-pressed="true"] {
-  background: var(--text);
   color: #FFFFFF;
+  background: var(--primary);
 }
 
 .btn--primary:hover:not(:disabled),
 .btn[aria-pressed="true"]:hover:not(:disabled) {
-  background: #24365E;
+  background: var(--primary-strong);
+}
+
+.btn--soft {
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+}
+
+.btn--light {
+  color: var(--text);
+  background: #FFFFFF;
 }
 
 .btn:disabled {
   opacity: 0.5;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
-/* ---------- Metrics ---------- */
+.btn--big {
+  min-height: 56px;
+  font-size: 1.1em;
+}
+
+.btn--icon {
+  width: 48px;
+  padding: 0;
+}
+
+.btn--tool {
+  white-space: nowrap;
+}
+
+.icon--hint {
+  color: var(--tertiary);
+}
+
+.btn:disabled .icon--hint {
+  color: inherit;
+}
+
+/* Mute button: show the icon that matches the state (pressed = muted). */
+#btn-mute[aria-pressed="true"] .icon--sound-on,
+#btn-mute[aria-pressed="false"] .icon--sound-off {
+  display: none;
+}
+
+#btn-mute[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--surface-high);
+}
+
+/* Segmented control: one pill holding a few buttons, one of them selected. */
+/* Always ONE row: the buttons share the width equally (on a phone a second
+   row would make the sticky top bar twice as tall). */
+.segmented {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px;
+  background: var(--surface-high);
+  border-radius: 14px;
+}
+
+.segmented .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.4em 0.6em;
+  white-space: nowrap;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.segmented .btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.segmented .btn[aria-pressed="true"] {
+  color: #FFFFFF;
+  background: var(--primary);
+  border-color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ===================== Metrics ===================== */
 
 .metric {
   display: flex;
   flex-direction: column;
-  padding: 0.5em 0.8em;
-  background: var(--surface);
-  border: var(--line-w) solid var(--line);
-  border-radius: var(--radius);
+  justify-content: space-between;
+  padding: 0.55em 0.8em;
 }
 
 .metric dt {
-  font-size: 0.85em;
+  font-size: 0.78em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
 .metric dd {
-  font-size: 1.35em;
+  font-family: var(--font-heading);
+  font-size: 1.6em;
   font-weight: 800;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Message bar ---------- */
+.metric__formula {
+  font-family: var(--font);
+  font-size: 0.5em;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* The Moves number scales from its left edge when it pulses. */
+#metric-moves {
+  transform-origin: left center;
+}
+
+/* ===================== Message bar ===================== */
 
 /* FIXED HEIGHT: always exactly two lines tall, even when empty, so a
-   message (or a timer warning later) can never push the board down.
+   message (or a timer warning) can never push the board down.
    Longer text is cut to two lines instead of growing the bar. */
 .message-bar {
   display: flex;
   align-items: center;
+  gap: 0.6em;
   height: calc(2 * 1.35em + 1.2em);
   padding: 0.6em 1em;
   overflow: hidden;
   line-height: 1.35;
-  color: var(--muted);
-  background: var(--surface);
-  border: var(--line-w) solid var(--line);
-  border-left: 6px solid var(--line);
+  font-weight: 700;
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  border: var(--line-w) solid rgba(25, 28, 30, 0.12);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
 }
 
 .message-bar__text {
@@ -83,50 +250,147 @@
   overflow: hidden;
 }
 
+/* One icon per message type; only the matching one is shown. */
+.message-bar__icon .icon {
+  display: none;
+  width: 1.35em;
+  height: 1.35em;
+}
+
+.message-bar[data-type="info"] [data-for="info"],
+.message-bar[data-type="error"] [data-for="error"],
+.message-bar[data-type="hint"] [data-for="hint"],
+.message-bar[data-type="success"] [data-for="success"],
+.message-bar[data-type="warning"] [data-for="warning"] {
+  display: block;
+}
+
 .message-bar[data-type="error"] {
   color: var(--error);
   background: var(--error-bg);
-  border-color: var(--error);
-  font-weight: 600;
 }
 
 .message-bar[data-type="hint"] {
   color: var(--hint);
   background: var(--hint-bg);
-  border-color: var(--hint);
-  font-weight: 600;
 }
 
 .message-bar[data-type="success"] {
   color: var(--success);
   background: var(--success-bg);
-  border-color: var(--success);
-  font-weight: 600;
 }
 
 .message-bar[data-type="warning"] {
   color: var(--warning);
   background: var(--warning-bg);
-  border-color: var(--warning);
-  font-weight: 600;
 }
 
-/* ---------- Side panels (Move History, How it works) ---------- */
+/* ===================== Controls and legend ===================== */
 
-.panel {
-  background: var(--surface);
-  border: var(--line-w) solid var(--line);
-  border-radius: var(--radius);
+.controls {
+  padding: 10px;
 }
 
+.legend {
+  display: grid;
+  gap: 0.5em;
+  padding: 0.8em 1em;
+}
+
+.legend__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.legend__list li {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.25em 0.6em;
+  font-size: 0.85em;
+  font-weight: 700;
+  background: var(--surface-low);
+  border-radius: 8px;
+}
+
+.legend__swatch {
+  width: 0.95em;
+  height: 0.95em;
+  background: var(--c);
+  border: 1px solid #0F172A;
+  border-radius: 4px;
+}
+
+/* ===================== Right column ===================== */
+
+/* Personal record */
+.record {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 0.8em 1em;
+}
+
+.record__badge,
+.modal__badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.6em;
+  height: 2.6em;
+  color: var(--tertiary);
+  background: var(--tertiary-soft);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.record__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.record__level {
+  font-family: var(--font-heading);
+  font-size: 1.1em;
+  font-weight: 700;
+}
+
+.record__value {
+  text-align: right;
+}
+
+.record__moves {
+  font-family: var(--mono);
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.record__time {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+/* Side panels (How it works, Move History) */
 .panel > summary {
   display: flex;
   align-items: center;
   gap: 0.5em;
   min-height: 48px;
-  padding: 0.5em 1em;
-  font-weight: 700;
+  padding: 0.6em 1em;
   cursor: pointer;
+}
+
+.panel__title {
+  font-family: var(--font-heading);
+  font-size: 1.1em;
+  font-weight: 700;
+}
+
+.panel > summary .chip {
+  margin-left: auto;
 }
 
 .panel__body {
@@ -140,64 +404,141 @@
   color: var(--muted);
 }
 
-/* ---------- Move log ---------- */
+.panel__label {
+  font-size: 0.78em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 
+.code-box {
+  margin: 0;
+  padding: 0.6em 0.8em;
+  font-size: 0.9em;
+  font-weight: 700;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  border: 1px solid rgba(25, 28, 30, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+.lastop {
+  display: grid;
+  gap: 0.4em;
+  padding: 0.6em;
+  background: var(--surface-high);
+  border-radius: 10px;
+}
+
+/* Three stack boxes: Stack A / B / C */
+.stackboxes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.stackbox {
+  display: grid;
+  justify-items: center;
+  gap: 0.15em;
+  padding: 0.5em 0.3em;
+  text-align: center;
+  background: var(--surface-low);
+  border: 2px solid transparent;
+  border-radius: 10px;
+}
+
+.stackbox__name {
+  font-size: 0.75em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stackbox__value {
+  font-family: var(--mono);
+  font-size: 1.1em;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.stackbox__size {
+  font-size: 0.78em;
+  color: var(--muted);
+}
+
+/* The stack that just received a push(), and the one that gave a pop(). */
+.stackbox.is-push {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.stackbox.is-push .stackbox__name,
+.stackbox.is-push .stackbox__value,
+.stackbox.is-push .stackbox__size {
+  color: var(--primary-strong);
+}
+
+.stackbox.is-pop {
+  border-style: dashed;
+  border-color: var(--peg);
+}
+
+.formula {
+  padding: 0.55em 0.8em;
+  font-size: 0.9em;
+  font-weight: 700;
+  background: var(--surface-low);
+  border-radius: 10px;
+}
+
+/* Move log: one row per entry, newest at the bottom and highlighted. */
 .log {
+  display: grid;
+  gap: 4px;
   max-height: 16em;
   overflow-y: auto;
   font-variant-numeric: tabular-nums;
 }
 
 .log li {
-  padding: 0.25em 0.5em;
+  padding: 0.35em 0.6em;
+  background: var(--surface-low);
   border-left: 4px solid transparent;
-}
-
-.log li + li {
-  border-top: 1px solid #EEF0F3;
+  border-radius: 8px;
 }
 
 .log .log--invalid {
+  font-weight: 700;
   color: var(--error);
   background: var(--error-bg);
   border-left-color: var(--error);
-  font-weight: 600;
 }
 
 .log .log--undo {
-  color: var(--muted);
   font-style: italic;
+  color: var(--muted);
   border-left-color: var(--peg);
+}
+
+.log .log--move.is-latest {
+  font-weight: 700;
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  border-left-color: var(--primary);
 }
 
 .log .log--empty {
   color: var(--muted);
+  background: none;
 }
 
-/* ---------- How it works ---------- */
-
-.code-box {
-  margin: 0;
-  padding: 0.6em 0.8em;
-  font-size: 0.9em;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  background: #F0F2F5;
-  border-radius: 8px;
-}
-
-.panel__label {
-  font-size: 0.85em;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.btn--big {
-  min-height: 56px;
-  font-size: 1.1em;
-}
-
-/* ---------- Welcome overlay ---------- */
+/* ===================== Welcome card ===================== */
 
 /* Covers the game column with a light veil: the board (3 disks on Peg A)
    stays visible underneath. The card sits at the TOP, so the disks at the
@@ -219,16 +560,14 @@
   gap: 0.6em;
   width: 100%;
   max-width: 34em;
-  padding: 0.9em 1em;
-  background: var(--surface);
-  border: 2px solid var(--text);
-  border-radius: var(--radius);
-  box-shadow: 0 10px 30px rgba(20, 33, 61, 0.18);
+  padding: 0.9em 1em 1.1em;
+  border: 2px solid var(--ink);
+  box-shadow: var(--shadow-lg);
 }
 
 .welcome__title {
-  font-size: 1.1em;
-  line-height: 1.25;
+  font-size: 1.15em;
+  font-weight: 800;
 }
 
 .welcome__rules > summary {
@@ -250,8 +589,34 @@
   gap: 0.4em;
 }
 
-/* Wider screens: rules on the left, nickname + Start on the right.
-   Two columns keep the card short, so it stays above the disks. */
+.welcome__label {
+  font-size: 0.85em;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.welcome__input {
+  min-height: 48px;
+  padding: 0.3em 0.7em;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-low);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+}
+
+.welcome__note {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+/* Poster banner: phones and tablets: hidden, so the card never covers the
+   disks. Width/height attributes + a fixed height reserve its space. */
+.welcome__banner {
+  display: none;
+}
+
+/* Wider screens: rules on the left, nickname + Start on the right. */
 @media (min-width: 600px) {
   .welcome__card {
     max-width: none;
@@ -263,617 +628,6 @@
   .welcome__title {
     grid-column: 1 / -1;
   }
-}
-
-.welcome__label {
-  font-size: 0.85em;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.welcome__input {
-  min-height: 48px;
-  padding: 0.3em 0.6em;
-  font: inherit;
-  color: var(--text);
-  border: 2px solid var(--peg);
-  border-radius: 10px;
-}
-
-/* ---------- Modals (<dialog>) ---------- */
-
-.modal {
-  width: min(92vw, 34em);
-  max-height: 92vh;
-  padding: 1.2em 1.2em 1em;
-  color: var(--text);
-  background: var(--surface);
-  border: 0;
-  border-radius: var(--radius);
-  box-shadow: 0 20px 60px rgba(20, 33, 61, 0.35);
-}
-
-.modal::backdrop {
-  background: rgba(20, 33, 61, 0.55);
-}
-
-.modal > * + * {
-  margin-top: 0.6em;
-}
-
-.modal__title {
-  font-size: 1.5em;
-  line-height: 1.2;
-  padding-right: 2em; /* room for the ✕ button */
-}
-
-.modal__close {
-  position: absolute;
-  top: 0.5em;
-  right: 0.5em;
-  min-width: 48px;
-  min-height: 48px;
-  font-size: 1.2em;
-  background: none;
-  border: 0;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.modal__strong {
-  font-weight: 700;
-}
-
-.modal__celebrate {
-  color: var(--success);
-}
-
-.modal__actions {
-  display: grid;
-  gap: 8px;
-}
-
-@media (min-width: 600px) {
-  .modal__actions {
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-  }
-}
-
-.stars {
-  font-size: 2.2em;
-  line-height: 1;
-  color: #B7791F; /* gold-brown, 3.6:1 on white: passes the 3:1 rule for large text */
-  letter-spacing: 0.1em;
-}
-
-.facts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.facts--wide {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.facts > div {
-  padding: 0.4em 0.6em;
-  background: var(--bg);
-  border-radius: 8px;
-}
-
-.facts dt {
-  font-size: 0.8em;
-  color: var(--muted);
-}
-
-.facts dd {
-  font-size: 1.2em;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  white-space: pre;
-}
-
-.summary__score {
-  font-size: 1.3em;
-}
-
-.optimal > summary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  list-style: none;
-}
-
-.optimal > summary::-webkit-details-marker {
-  display: none;
-}
-
-.optimal__list {
-  max-height: 12em;
-  margin-top: 0.5em;
-  padding: 0.4em 0.6em;
-  overflow-y: auto;
-  font-variant-numeric: tabular-nums;
-  background: var(--bg);
-  border-radius: 8px;
-}
-
-.best {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-
-.best caption {
-  font-weight: 700;
-  text-align: left;
-  padding-bottom: 0.3em;
-}
-
-.best th,
-.best td {
-  padding: 0.3em 0.4em;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-}
-
-.best th {
-  font-size: 0.85em;
-  color: var(--muted);
-}
-
-.copy-status {
-  min-height: 1.4em;
-  font-weight: 600;
-  color: var(--success);
-}
-
-.copy-fallback {
-  width: 100%;
-  font: inherit;
-}
-
-/* ---------- Time's up! ---------- */
-
-.timeup {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: rgba(20, 33, 61, 0.9);
-}
-
-.timeup__text {
-  font-size: clamp(56px, 13vw, 260px);
-  font-weight: 900;
-  line-height: 1;
-  color: #FFFFFF;
-  text-align: center;
-}
-
-/* ---------- Debug panel (?debug=1 only) ---------- */
-
-.debug-panel {
-  position: fixed;
-  right: 8px;
-  bottom: 8px;
-  z-index: 30;
-  display: grid;
-  gap: 6px;
-  padding: 8px;
-  font-size: 14px;
-  background: #FFF7D6;
-  border: 2px dashed var(--warning);
-  border-radius: 10px;
-}
-
-.debug-panel__title {
-  font-weight: 700;
-}
-
-.debug-panel .btn {
-  min-height: 40px;
-  font-size: 14px;
-}
-
-/* ---------- Confetti (fixed layer, never blocks clicks) ---------- */
-
-.confetti {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-}
-
-/* The Moves number scales from its left edge when it pulses. */
-#metric-moves {
-  transform-origin: left center;
-}
-
-.welcome__note {
-  font-size: 0.85em;
-  color: var(--muted);
-}
-
-.modal__wide {
-  width: 100%;
-}
-
-/* ---------- Learning Mode ---------- */
-
-.learning {
-  display: grid;
-  gap: var(--gap);
-}
-
-/* In Learning Mode the game's difficulty buttons are hidden, so there is
-   only one "3 / 4 / 5 Disks" choice on screen (the demo's). */
-.is-learning .topbar .difficulty {
-  display: none;
-}
-
-.learning__banner {
-  padding: 0.6em 1em;
-  font-weight: 700;
-  color: var(--hint);
-  background: var(--hint-bg);
-  border: 2px solid var(--hint);
-  border-radius: var(--radius);
-}
-
-.learning__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-}
-
-.learning__title {
-  margin-right: auto;
-  font-size: 1.3em;
-}
-
-.learning__grid,
-.learning__main,
-.learning__side {
-  display: grid;
-  gap: var(--gap);
-  align-content: start;
-  min-width: 0;
-}
-
-@media (min-width: 1024px) {
-  .learning__grid {
-    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
-    align-items: start;
-  }
-}
-
-/* Fixed height (two lines), so the caption never moves the board. */
-.learning__subtower {
-  display: flex;
-  align-items: center;
-  min-height: calc(2 * 1.35em);
-  line-height: 1.35;
-  font-weight: 700;
-}
-
-/* The demo board is watch-only. */
-.board--demo .peg,
-.board--demo .disk {
-  cursor: default;
-}
-
-.board--demo .disk {
-  touch-action: auto;
-}
-
-/* Every disk of the sub-tower being moved gets a dashed outline. */
-.disk.in-subtower {
-  outline: 3px dashed var(--text);
-  outline-offset: 2px;
-}
-
-.learning__controls {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-@media (min-width: 600px) {
-  .learning__controls {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.learning__speed {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.learning__label {
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.learning__count {
-  font-size: 1.2em;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-.progress {
-  height: 10px;
-  margin: 0.3em 0;
-  overflow: hidden;
-  background: var(--line);
-  border-radius: 999px;
-}
-
-/* The bar fills with a transform (cheap to animate), not by changing its width. */
-.progress__fill {
-  height: 100%;
-  background: var(--hint);
-  transform-origin: left center;
-  transform: scaleX(0);
-  transition: transform 300ms ease;
-}
-
-.learning__current {
-  min-height: calc(2 * 1.4em);
-  font-weight: 600;
-}
-
-.steps {
-  position: relative; /* so a step's offsetTop is measured inside the list */
-  max-height: 14em;
-  overflow-y: auto;
-  font-variant-numeric: tabular-nums;
-}
-
-.steps li {
-  padding: 0.25em 0.5em;
-  border-left: 4px solid transparent;
-}
-
-.steps .is-done {
-  color: var(--muted);
-}
-
-.steps .is-current {
-  font-weight: 700;
-  color: var(--text);
-  background: var(--hint-bg);
-  border-left-color: var(--hint);
-}
-
-/* Phone tabs: Stack | Recursion. From 600 px both panels show. */
-.tabs {
-  display: flex;
-  gap: 8px;
-}
-
-.tab {
-  flex: 1;
-  min-height: 48px;
-  font-weight: 700;
-  background: var(--surface);
-  border: 2px solid var(--text);
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.tab[aria-selected="true"] {
-  color: #FFFFFF;
-  background: var(--text);
-}
-
-.learning__side[data-tab="stack"] .learn-card--recursion,
-.learning__side[data-tab="recursion"] .learn-card--stack {
-  display: none;
-}
-
-@media (min-width: 600px) {
-  .tabs {
-    display: none;
-  }
-
-  .learning__side[data-tab] .learn-card--recursion,
-  .learning__side[data-tab] .learn-card--stack {
-    display: grid;
-  }
-}
-
-.learn-card {
-  display: grid;
-  /* minmax(0, 1fr): the card may be narrower than a wide call tree, so the
-     tree scrolls inside its own box instead of stretching the whole page. */
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.6em;
-  padding: 1em;
-  background: var(--surface);
-  border: var(--line-w) solid var(--line);
-  border-radius: var(--radius);
-}
-
-.learn-card__title {
-  font-size: 1.1em;
-}
-
-/* Call stack: blocks stacked bottom -> top (column-reverse puts the first, oldest call at the bottom). */
-.callstack {
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 4px;
-}
-
-.callstack__block {
-  padding: 0.4em 0.8em;
-  font-family: var(--mono);
-  background: var(--bg);
-  border: 2px solid var(--peg);
-  border-radius: 8px;
-}
-
-.callstack__block.is-top {
-  font-weight: 700;
-  background: var(--hint-bg);
-  border-color: var(--hint);
-}
-
-.callstack__note {
-  font-family: var(--font);
-  font-weight: 600;
-  color: var(--hint);
-}
-
-.callstack__empty {
-  color: var(--muted);
-}
-
-/* Call tree (SVG). Wide trees scroll inside this box, never the page. */
-.tree > summary {
-  display: flex;
-  align-items: center;
-  min-height: 48px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.tree__box {
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.tree__box svg {
-  display: block;
-  width: 100%;
-  min-width: calc(var(--cols) * 64px); /* keeps the labels readable on phones */
-  max-width: calc(var(--cols) * 120px);
-  height: auto;
-  font-family: var(--mono);
-}
-
-.tree-edge {
-  stroke: var(--line);
-  stroke-width: 3;
-}
-
-.tree-edge.is-path {
-  stroke: var(--hint);
-}
-
-.tree-node rect {
-  fill: var(--surface);
-  stroke: var(--peg);
-  stroke-width: 2;
-}
-
-.tree-node text {
-  font-size: 15px;
-  font-weight: 700;
-  fill: var(--text);
-}
-
-.tree-node.is-done rect {
-  fill: var(--bg);
-  stroke: var(--line);
-}
-
-.tree-node.is-done text {
-  fill: var(--muted);
-}
-
-.tree-node.is-path rect {
-  stroke: var(--hint);
-  stroke-width: 3;
-}
-
-.tree-node.is-active rect {
-  fill: var(--hint);
-  stroke: var(--hint);
-}
-
-.tree-node.is-active text {
-  fill: #FFFFFF;
-}
-
-/* Theory cards */
-.theory p {
-  line-height: 1.5;
-}
-
-.theory__table {
-  width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-
-.theory__table caption {
-  padding-bottom: 0.3em;
-  font-weight: 700;
-  text-align: left;
-}
-
-.theory__table th,
-.theory__table td {
-  padding: 0.25em 0.5em;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-}
-
-.theory__table .is-current td {
-  font-weight: 800;
-  background: var(--hint-bg);
-}
-
-/* ---------- Top-bar tools ---------- */
-
-.btn--icon {
-  display: inline-grid;
-  place-items: center;
-  width: 48px;
-  padding: 0;
-}
-
-.icon {
-  width: 26px;
-  height: 26px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.icon--sound-on path:first-child,
-.icon--sound-off path:first-child {
-  fill: currentColor;
-}
-
-/* Show the icon that matches the state (pressed = muted). */
-#btn-mute[aria-pressed="true"] .icon--sound-on,
-#btn-mute[aria-pressed="false"] .icon--sound-off {
-  display: none;
-}
-
-.btn--tool {
-  white-space: nowrap;
-}
-
-/* ---------- Poster banner on the welcome card ---------- */
-
-/* Phones and tablets: hidden, so the card never covers the disks.
-   Width/height attributes + a fixed height reserve its space: no layout shift. */
-.welcome__banner {
-  display: none;
 }
 
 @media (min-width: 1024px) {
@@ -908,7 +662,9 @@
     width: auto;
     max-width: 100%;
     height: clamp(64px, 9vh, 120px);
-    border-radius: 8px;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
   }
 
   .welcome__banner[hidden] {
@@ -916,12 +672,708 @@
   }
 }
 
+/* ===================== Pop-ups (<dialog>) ===================== */
+
+.modal {
+  width: min(92vw, 34em);
+  max-height: 92vh;
+  padding: 1.2em 1.2em 1.1em;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 0 6px 0 var(--ink), 0 24px 60px rgba(20, 33, 61, 0.35);
+}
+
+.modal--wide {
+  width: min(94vw, 40em);
+}
+
+.modal::backdrop {
+  background: rgba(20, 33, 61, 0.55);
+}
+
+.modal > * + * {
+  margin-top: 0.65em;
+}
+
+.modal__title {
+  font-size: 1.5em;
+  font-weight: 800;
+  padding-right: 2em; /* room for the ✕ button */
+}
+
+.modal__close {
+  position: absolute;
+  top: 0.5em;
+  right: 0.5em;
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 1.2em;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.modal__strong {
+  font-weight: 800;
+}
+
+.modal__celebrate,
 .modal__best {
   color: var(--success);
 }
 
+.modal__actions {
+  display: grid;
+  gap: 8px;
+}
+
+.modal__wide {
+  width: 100%;
+}
+
+@media (min-width: 600px) {
+  .modal__actions {
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
+}
+
+.stars {
+  font-size: 2.2em;
+  line-height: 1;
+  color: #B7791F; /* gold-brown, 3.6:1 on white: passes the 3:1 rule for large text */
+  letter-spacing: 0.1em;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.facts--wide {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.facts > div {
+  padding: 0.45em 0.7em;
+  background: var(--surface-low);
+  border-radius: 10px;
+}
+
+.facts dt {
+  font-size: 0.75em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.facts dd {
+  font-family: var(--font-heading);
+  font-size: 1.25em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}
+
+.summary__score {
+  font-size: 1.3em;
+}
+
 .summary__best-score {
   font-size: 0.8em;
+  font-weight: 800;
+  color: var(--success);
+}
+
+.best {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.best caption {
+  padding-bottom: 0.3em;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  text-align: left;
+}
+
+.best th,
+.best td {
+  padding: 0.3em 0.4em;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.best th {
+  font-size: 0.8em;
+  color: var(--muted);
+}
+
+.copy-status {
+  min-height: 1.4em;
   font-weight: 700;
   color: var(--success);
+}
+
+.copy-fallback {
+  width: 100%;
+  font: inherit;
+}
+
+/* ===================== Time's up! ===================== */
+
+.timeup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(20, 33, 61, 0.92);
+}
+
+.timeup__text {
+  font-family: var(--font-heading);
+  font-size: clamp(56px, 13vw, 260px);
+  font-weight: 800;
+  line-height: 1;
+  color: #FFFFFF;
+  text-align: center;
+}
+
+/* ===================== Debug panel (?debug=1 only) ===================== */
+
+.debug-panel {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  z-index: 30;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  font-size: 14px;
+  background: #FFF7D6;
+  border: 2px dashed var(--warning);
+  border-radius: 10px;
+}
+
+.debug-panel__title {
+  font-weight: 700;
+}
+
+.debug-panel .btn {
+  min-height: 40px;
+  font-size: 14px;
+}
+
+/* ===================== Confetti (fixed layer, never blocks clicks) ===================== */
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+/* ===================== Learning Mode ===================== */
+
+.learning {
+  display: grid;
+  gap: var(--gap);
+}
+
+/* In Learning Mode the game's difficulty buttons are hidden, so there is
+   only one "3 / 4 / 5 Disks" choice on screen (the demo's). */
+.is-learning .topbar .difficulty {
+  display: none;
+}
+
+.learning__banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 0.5em 0.6em 0.5em 1em;
+  color: #FFFFFF;
+  background: var(--tertiary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.learning__banner-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-weight: 800;
+}
+
+.learning__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.learning__header .card__overline {
+  color: var(--primary);
+}
+
+.learning__title {
+  font-size: 1.6em;
+  font-weight: 800;
+}
+
+.learning__grid,
+.learning__panels,
+.learning__theory {
+  display: grid;
+  gap: var(--gap);
+  align-items: start;
+  min-width: 0;
+}
+
+.learning__main,
+.learning__steps {
+  display: grid;
+  gap: 0.8em;
+  min-width: 0;
+  padding: clamp(12px, 1.4vw, 28px);
+}
+
+@media (min-width: 1024px) {
+  .learning__grid {
+    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  }
+
+  .learning__panels {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+
+  .learning__panels .tabs {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 900px) {
+  .learning__theory {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Fixed height (two lines), so the caption never moves the board. */
+.learning__subtower {
+  min-height: calc(2 * 1.35em + 0.8em);
+  line-height: 1.35;
+}
+
+.learning__now {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 0.6em 0.8em;
+  background: var(--surface-low);
+  border-radius: 12px;
+}
+
+.learning__now-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.4em;
+  height: 2.4em;
+  color: #FFFFFF;
+  background: var(--primary);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.learning__current {
+  min-height: calc(2 * 1.35em);
+  line-height: 1.35;
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.learning__count {
+  font-size: 0.85em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress {
+  height: 12px;
+  margin-top: 0.35em;
+  overflow: hidden;
+  background: var(--surface-high);
+  border-radius: 999px;
+}
+
+/* The bar fills with a transform (cheap to animate), not by changing its width. */
+.progress__fill {
+  height: 100%;
+  background: var(--primary);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 300ms ease;
+}
+
+.learning__controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (min-width: 600px) {
+  .learning__controls {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Autoplay / Pause: one button, the icon follows the state. */
+#btn-learn-play[aria-pressed="false"] .icon--pause,
+#btn-learn-play[aria-pressed="true"] .icon--play {
+  display: none;
+}
+
+.learning__speed {
+  justify-content: flex-start;
+}
+
+.learning__speed .btn {
+  flex: 0 0 auto;
+}
+
+.learning__label {
+  padding: 0 0.6em;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+/* ----- Step list (click a step to jump to it) ----- */
+
+.steps {
+  position: relative; /* so a step's offsetTop is measured inside the list */
+  display: grid;
+  gap: 6px;
+  max-height: 28em;
+  overflow-y: auto;
+  padding: 2px 4px 6px 2px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6em;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.5em 0.7em;
+  text-align: left;
+  color: var(--text);
+  background: var(--surface-low);
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.step:hover:not(:disabled) {
+  background: var(--surface-high);
+}
+
+.step:disabled {
+  cursor: not-allowed;
+}
+
+.step__num {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.step__dot {
+  width: 0.8em;
+  height: 0.8em;
+  background: var(--c);
+  border: 1px solid #0F172A;
+  border-radius: 50%;
+}
+
+.steps .is-done .step {
+  color: var(--muted);
+}
+
+.steps .is-current .step {
+  font-weight: 800;
+  color: #FFFFFF;
+  background: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.steps .is-current .step__num {
+  color: var(--primary-soft);
+}
+
+/* "Active" tag on the current step (decoration; aria-current says it to screen readers). */
+.steps .is-current .step::after {
+  content: "Active";
+  padding: 0.1em 0.45em;
+  font-size: 0.7em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #FFFFFF;
+  background: var(--tertiary);
+  border-radius: 6px;
+}
+
+/* ----- Phone tabs: Stack | Recursion. From 600 px both panels show. ----- */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-high);
+  border-radius: 14px;
+}
+
+.tab {
+  flex: 1;
+  min-height: 48px;
+  font-weight: 800;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.tab[aria-selected="true"] {
+  color: #FFFFFF;
+  background: var(--primary);
+  border-color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.learning__panels[data-tab="stack"] .learn-card--recursion,
+.learning__panels[data-tab="recursion"] .learn-card--stack {
+  display: none;
+}
+
+@media (min-width: 600px) {
+  .tabs {
+    display: none;
+  }
+
+  .learning__panels[data-tab] .learn-card--recursion,
+  .learning__panels[data-tab] .learn-card--stack {
+    display: grid;
+  }
+}
+
+.learn-card {
+  display: grid;
+  /* minmax(0, 1fr): the card may be narrower than a wide call tree, so the
+     tree scrolls inside its own box instead of stretching the whole page. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.7em;
+  padding: clamp(12px, 1.4vw, 28px);
+}
+
+/* ----- Call stack: blocks stacked bottom -> top ----- */
+
+/* column-reverse puts the first (oldest) call at the bottom. */
+.callstack {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 5px;
+  padding: 0.5em;
+  background: var(--surface-low);
+  border-radius: 12px;
+}
+
+.callstack__block {
+  padding: 0.45em 0.8em;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: #131B2E;
+  background: var(--secondary-soft);
+  border-radius: 8px;
+}
+
+.callstack__block:first-child {
+  color: var(--muted);
+  background: var(--surface-high);
+}
+
+.callstack__block.is-top {
+  color: #FFFFFF;
+  background: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.callstack__note {
+  font-family: var(--font);
+  font-weight: 700;
+}
+
+.is-top .callstack__note {
+  color: var(--primary-soft);
+}
+
+.callstack__empty {
+  color: var(--muted);
+}
+
+/* ----- Call tree (SVG). Wide trees scroll inside their box, never the page. ----- */
+
+.tree > summary {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tree__box {
+  overflow-x: auto;
+  padding: 0.4em 0.2em 0.3em;
+  background: var(--surface-low);
+  border-radius: 12px;
+}
+
+.tree__box svg {
+  display: block;
+  width: 100%;
+  min-width: calc(var(--cols) * 64px); /* keeps the labels readable on phones */
+  max-width: calc(var(--cols) * 120px);
+  height: auto;
+  margin: 0 auto;
+  font-family: var(--mono);
+}
+
+.tree-edge {
+  stroke: #C7C4D7;
+  stroke-width: 3;
+}
+
+.tree-edge.is-path {
+  stroke: var(--primary);
+}
+
+.tree-node rect {
+  fill: var(--surface);
+  stroke: #777586;
+  stroke-width: 2;
+}
+
+.tree-node text {
+  font-size: 15px;
+  font-weight: 700;
+  fill: var(--text);
+}
+
+.tree-node.is-done rect {
+  fill: var(--surface-high);
+  stroke: #C7C4D7;
+}
+
+.tree-node.is-done text {
+  fill: var(--muted);
+}
+
+.tree-node.is-path rect {
+  fill: var(--secondary-soft);
+  stroke: var(--primary);
+  stroke-width: 3;
+}
+
+.tree-node.is-active rect {
+  fill: var(--primary);
+  stroke: var(--ink);
+}
+
+.tree-node.is-active text {
+  fill: #FFFFFF;
+}
+
+.tree__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em 1em;
+  margin-top: 0.5em;
+  font-size: 0.8em;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.tree__legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.tree__key {
+  width: 0.9em;
+  height: 0.9em;
+  background: var(--surface);
+  border: 2px solid #777586;
+  border-radius: 4px;
+}
+
+.tree__key--done { background: var(--surface-high); border-color: #C7C4D7; }
+.tree__key--path { background: var(--secondary-soft); border-color: var(--primary); }
+.tree__key--active { background: var(--primary); border-color: var(--ink); }
+
+/* ----- Theory cards ----- */
+
+.theory .card__overline {
+  color: var(--primary);
+}
+
+.theory p {
+  line-height: 1.55;
+}
+
+.theory__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.theory__table caption {
+  padding-bottom: 0.3em;
+  font-weight: 800;
+  text-align: left;
+}
+
+.theory__table th,
+.theory__table td {
+  padding: 0.25em 0.5em;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.theory__table .is-current td {
+  font-weight: 800;
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+}
+
+.theory__fact {
+  padding: 0.6em 0.8em;
+  font-size: 0.9em;
+  background: var(--surface-low);
+  border-radius: 10px;
 }

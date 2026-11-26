@@ -1,7 +1,7 @@
-/* board.css — pegs, disks, selection and the error shake.
+/* board.css — pegs, disks, selection, drag and the error shake.
 
    Each peg is a <button> that covers the whole column (easy to tap on a
-   phone). Inside it: the peg area (rod, base, disks) and the label.
+   phone). Inside it: the peg area (rod, pedestal, disks) and the label.
    The peg area always has room for 5 disks plus the lift, so the board
    never changes height when the difficulty changes. */
 
@@ -9,11 +9,25 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(4px, 1vw, 20px);
-  padding: clamp(10px, 1.5vw, 28px) clamp(6px, 1.5vw, 28px);
-  background: var(--surface);
-  border: var(--line-w) solid var(--line);
-  border-radius: var(--radius);
+  padding: clamp(12px, 1.6vw, 32px) clamp(8px, 1.6vw, 32px) clamp(10px, 1.2vw, 24px);
+  /* A light surface with a faint dotted grid, like squared paper. */
+  background-color: var(--surface-low);
+  background-image: radial-gradient(rgba(25, 28, 30, 0.14) 1px, transparent 1px);
+  background-size: 16px 16px;
+  border: var(--line-w) solid rgba(25, 28, 30, 0.12);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
   touch-action: manipulation; /* no double-tap zoom delay on phones */
+}
+
+/* The dark base bar under all three pegs. */
+.board__plinth {
+  grid-column: 1 / -1;
+  height: 14px;
+  margin-top: 4px;
+  background: var(--ink);
+  border-radius: 8px;
+  box-shadow: 0 3px 0 #0F172A;
 }
 
 .peg {
@@ -24,21 +38,21 @@
   padding: 0;
   background: none;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
 }
 
 .peg-area {
   position: relative;
   height: calc(var(--disk-h) * 6.6);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .peg:hover .peg-area {
-  background: rgba(20, 33, 61, 0.04);
+  background: rgba(67, 56, 202, 0.05);
 }
 
-/* The base under each peg. */
+/* The pedestal under each peg (spec colour #5B5F66). */
 .peg-area::after {
   content: "";
   position: absolute;
@@ -47,17 +61,19 @@
   bottom: 0;
   height: var(--base-h);
   background: var(--peg);
-  border-radius: 5px;
+  border-radius: 6px 6px 3px 3px;
+  box-shadow: var(--shadow-sm);
 }
 
+/* A metal-looking rod: the peg colour with a lighter stripe in the middle. */
 .rod {
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: calc(clamp(6px, 0.8vw, 14px) * var(--disk-scale));
+  width: calc(clamp(8px, 0.9vw, 16px) * var(--disk-scale));
   height: calc(var(--disk-h) * 5.9);
   transform: translateX(-50%);
-  background: var(--peg);
+  background: linear-gradient(90deg, #44474E 0%, #9AA0A8 45%, var(--peg) 100%);
   border-radius: 999px 999px 0 0;
 }
 
@@ -70,14 +86,20 @@
   display: flex;
   flex-direction: column-reverse;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
 
 .peg-label {
-  font-weight: 700;
   font-size: 0.9em;
-  line-height: 1.2;
+  line-height: 1.25;
   text-align: center;
+  color: var(--muted);
+}
+
+.peg-label strong {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--text);
 }
 
 /* ---------- Disks ---------- */
@@ -89,12 +111,13 @@
   justify-content: center;
   width: calc(30% + 65% * var(--d) / var(--n));
   height: var(--disk-h);
-  border: 2px solid rgba(20, 33, 61, 0.25);
-  border-radius: calc(var(--disk-h) / 2.5);
-  font-size: calc(var(--disk-h) * 0.62);
+  font-family: var(--font-heading);
+  font-size: calc(var(--disk-h) * 0.6);
   font-weight: 800;
   line-height: 1;
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+  border: 1.5px solid #0F172A;
+  border-radius: 9px;
+  box-shadow: 0 3px 0 #0F172A;
   /* Only transform is ever animated (smooth on cheap phones). */
   transition: transform 120ms ease;
   /* Disks are the drag handles: a swipe that starts ON a disk drags it.
@@ -102,6 +125,12 @@
   touch-action: none;
   cursor: grab;
 }
+
+.disk[data-disk="1"] { background: var(--disk-1); color: var(--disk-1-text); }
+.disk[data-disk="2"] { background: var(--disk-2); color: var(--disk-2-text); }
+.disk[data-disk="3"] { background: var(--disk-3); color: var(--disk-3-text); }
+.disk[data-disk="4"] { background: var(--disk-4); color: var(--disk-4-text); }
+.disk[data-disk="5"] { background: var(--disk-5); color: var(--disk-5-text); }
 
 /* While moving or being dragged, a disk is drawn above the other pegs. */
 .disk.is-moving,
@@ -115,35 +144,37 @@
   cursor: grabbing;
 }
 
-/* Drop targets while dragging: green = legal, red = not allowed. */
-.peg-area.drop-ok {
-  outline: 3px solid var(--success);
-  outline-offset: -3px;
-}
-
-.peg-area.drop-bad {
-  outline: 3px solid var(--error);
-  outline-offset: -3px;
-}
-
-.disk[data-disk="1"] { background: var(--disk-1); color: var(--disk-1-text); }
-.disk[data-disk="2"] { background: var(--disk-2); color: var(--disk-2-text); }
-.disk[data-disk="3"] { background: var(--disk-3); color: var(--disk-3-text); }
-.disk[data-disk="4"] { background: var(--disk-4); color: var(--disk-4-text); }
-.disk[data-disk="5"] { background: var(--disk-5); color: var(--disk-5-text); }
-
 /* ---------- Selection ---------- */
 
 /* The selected top disk lifts 12 px and glows gold. */
 .disk.is-lifted {
   transform: translateY(-12px);
-  box-shadow: 0 0 0 3px var(--glow), 0 0 18px 6px rgba(255, 195, 0, 0.65);
+  box-shadow: 0 0 0 3px var(--glow), 0 0 18px 6px rgba(255, 195, 0, 0.65), 0 3px 0 #0F172A;
 }
 
-/* While a disk is selected, the OTHER pegs show a dashed outline:
-   "you can drop it here". outline never changes the layout. */
+/* While a disk is selected, the OTHER pegs light up as places to drop it:
+   a tinted column, a dashed outline and an indigo rod. Outlines and
+   backgrounds never change the layout. */
 .board.has-selection .peg:not(.is-selected) .peg-area {
-  outline: 3px dashed var(--peg);
+  background: rgba(67, 56, 202, 0.08);
+  outline: 2px dashed var(--primary);
+  outline-offset: -2px;
+}
+
+.board.has-selection .peg:not(.is-selected) .rod {
+  background: linear-gradient(90deg, var(--primary-strong) 0%, #A9A3FF 45%, var(--primary) 100%);
+}
+
+/* Drop targets while dragging: green = legal, red = not allowed. */
+.peg-area.drop-ok {
+  background: rgba(6, 118, 71, 0.08);
+  outline: 3px solid var(--success);
+  outline-offset: -3px;
+}
+
+.peg-area.drop-bad {
+  background: rgba(180, 35, 24, 0.07);
+  outline: 3px solid var(--error);
   outline-offset: -3px;
 }
 
@@ -157,7 +188,7 @@
 
 .disk.is-hint {
   position: relative;
-  box-shadow: 0 0 0 3px var(--hint);
+  box-shadow: 0 0 0 3px var(--hint), 0 3px 0 #0F172A;
 }
 
 .disk.is-hint::after {
@@ -172,9 +203,9 @@
 }
 
 .peg-area.is-hint-target {
+  background: var(--hint-bg);
   outline: 3px solid var(--hint);
   outline-offset: -3px;
-  background: var(--hint-bg);
 }
 
 /* ---------- Error shake (300 ms) ---------- */
@@ -190,6 +221,23 @@
 
 .is-shaking {
   animation: shake 300ms ease;
+}
+
+/* ---------- Learning Mode demo board (watch only) ---------- */
+
+.board--demo .peg,
+.board--demo .disk {
+  cursor: default;
+}
+
+.board--demo .disk {
+  touch-action: auto;
+}
+
+/* Every disk of the sub-tower being moved gets a dashed outline. */
+.disk.in-subtower {
+  outline: 3px dashed var(--primary-strong);
+  outline-offset: 3px;
 }
 
 /* ---------- Reduced motion ---------- */

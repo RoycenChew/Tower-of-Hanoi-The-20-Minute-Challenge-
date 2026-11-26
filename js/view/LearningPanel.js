@@ -5,6 +5,7 @@
 // It decides nothing about the walkthrough itself.
 
 import { Board, LEARN_TIMING } from './Board.js';
+import { renderStackBoxes } from './UIOverlay.js';
 import { pegLetter } from '../model/Rules.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -36,6 +37,7 @@ export class LearningPanel {
       prev: byId('btn-learn-prev'),
       next: byId('btn-learn-next'),
       play: byId('btn-learn-play'),
+      playLabel: byId('btn-learn-play-label'),
       reset: byId('btn-learn-reset'),
       speedButtons: [...doc.querySelectorAll('[data-speed]')],
       diskButtons: [...doc.querySelectorAll('[data-learn-disks]')],
@@ -49,7 +51,7 @@ export class LearningPanel {
       callStack: byId('learn-callstack'),
       treeDetails: byId('learn-tree-details'),
       treeBox: byId('learn-tree'),
-      side: doc.querySelector('.learning__side'),
+      side: doc.querySelector('.learning__panels'),
       tabs: [...doc.querySelectorAll('[role="tab"]')],
       theoryRows: [...doc.querySelectorAll('[data-theory-n]')],
       theoryN: byId('theory-current-n'),
@@ -114,7 +116,7 @@ export class LearningPanel {
     this.#el.next.disabled = locked || state.atEnd;
     this.#el.play.disabled = locked;
     this.#el.reset.disabled = locked;
-    this.#el.play.textContent = state.playing ? 'Pause' : 'Autoplay';
+    this.#el.playLabel.textContent = state.playing ? 'Pause' : 'Autoplay';
     this.#el.play.setAttribute('aria-pressed', String(state.playing));
     for (const b of this.#el.speedButtons) {
       b.disabled = locked;
@@ -144,6 +146,7 @@ export class LearningPanel {
     // Step list: done steps greyed, the step just made highlighted.
     const items = this.#el.steps.children;
     for (let i = 0; i < items.length; i++) {
+      items[i].firstElementChild.disabled = state.locked; // no jumping after Time's up
       items[i].classList.toggle('is-done', i < index - 1);
       items[i].classList.toggle('is-current', i === index - 1);
       if (i === index - 1) items[i].setAttribute('aria-current', 'step');
@@ -164,9 +167,7 @@ export class LearningPanel {
 
   #renderStackPanel(state) {
     this.#el.ops.textContent = state.stackOps ?? 'No moves yet. Press Next to make the first move.';
-    this.#el.stacks.textContent = state.snapshot.pegs
-      .map((disks, peg) => `${pegLetter(peg)}: [${disks.join(', ')}]`)
-      .join('  ');
+    renderStackBoxes(this.#el.stacks, state.snapshot.pegs, state.lastMove);
   }
 
   // ----- Recursion: call stack + call tree -----
@@ -220,10 +221,29 @@ export class LearningPanel {
   #build(state) {
     this.#builtFor = state.diskCount;
 
-    // Full step list.
+    // Full step list. Each step is a button: clicking it jumps there
+    // (Input.js calls learning.seek()). The dot shows which disk moves;
+    // each call in the trace moves the disk with its own number n.
+    const diskOfStep = [];
+    for (const frame of state.frames) diskOfStep[frame.moveIndex] = frame.n;
+
     this.#el.steps.replaceChildren(...state.steps.map((text, i) => {
       const li = this.#doc.createElement('li');
-      li.textContent = `${i + 1}. ${text}`;
+      const button = this.#doc.createElement('button');
+      button.type = 'button';
+      button.className = 'step';
+      button.dataset.step = String(i + 1); // step k = k moves done
+      const num = this.#doc.createElement('span');
+      num.className = 'step__num';
+      num.textContent = `${i + 1}. `;
+      const dot = this.#doc.createElement('span');
+      dot.className = 'step__dot';
+      dot.style.setProperty('--c', `var(--disk-${diskOfStep[i]})`);
+      dot.setAttribute('aria-hidden', 'true');
+      const label = this.#doc.createElement('span');
+      label.textContent = text;
+      button.append(num, dot, label);
+      li.append(button);
       return li;
     }));
 

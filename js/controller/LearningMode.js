@@ -88,6 +88,28 @@ export class LearningMode {
     this.#publish({ disk: move.disk });
   }
 
+  /**
+   * Jump straight to a step (clicking it in the step list). `step` = the number
+   * of moves done, 0 … 2ⁿ − 1. Goes forward with tryMove() or back with undo(),
+   * one stack move at a time, so the demo board is always a real, legal state.
+   * Pauses autoplay; a jump is not animated.
+   */
+  seek(step) {
+    if (this.locked || !this.isOpen) return;
+    if (!Number.isInteger(step) || step < 0 || step > this.total) return;
+    this.#stopAutoplay();
+    while (this.index < step) {
+      const move = this.#trace.moves[this.index];
+      this.#game.tryMove(move.from, move.to);
+      this.index++;
+    }
+    while (this.index > step) {
+      this.#game.undo();
+      this.index--;
+    }
+    this.#publish();
+  }
+
   /** Autoplay: one step every 1.2 s ÷ speed. At the end, starts again from step 0. */
   play() {
     if (this.locked || !this.isOpen || this.playing) return;

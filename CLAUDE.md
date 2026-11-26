@@ -84,6 +84,13 @@ The full spec lives in `docs/` (plan + assignment PDF:
 - Welcome card: show it as a banner only at >= 1024 px; hidden on phones; alt text; `loading="eager"` + width/height (no layout shift). The card must still never cover Peg A's disks.
 - Never show the poster during gameplay or in Learning Mode.
 
+## Phase 7 visual design rules
+- Style from the user's mock-up (`docs/design/redesign.html`, git-ignored; it loads Tailwind from a CDN, never copy that): white cards with a hard dark bottom shadow (`--shadow*`), indigo accent `--primary #4338CA`, pressable buttons (2 px transform only), segmented pills (always ONE row), inline SVG icons from the `<symbol>` sprite at the top of index.html (no icon fonts).
+- Fonts are self-hosted in `assets/fonts` (Epilogue headings, Manrope text, OFL). Timer uses the monospace stack so digits never change width.
+- Never copy the mock-up's placeholder content (nav pages, ranks, streaks, fake footer), its wrong call tree, its changed wording, its tiny text or its endless animations.
+- Learning Mode step list: each step is a `<button data-step>`; clicking calls `learning.seek(step)` (no animation, pauses autoplay, refused after Time's up, never touches Stats).
+- `renderStackBoxes()` in UIOverlay.js draws the Stack A/B/C boxes for both the game and Learning Mode.
+
 ## Git
 - Individual assignment: NEVER add Claude as co-author or contributor (no `Co-Authored-By` lines, no AI attribution in commits or PRs).
 - Commit or push only when the user asks. The user creates the GitHub repo and connects the remote.

@@ -7,3 +7,6 @@ Thumbs.db
 
 # Assignment brief stays local only
 docs/*.pdf
+
+# Design references (load Tailwind from a CDN; not part of the site)
+docs/design/

@@ -1,7 +1,7 @@
-/* base.css — colour variables, fonts and reset.
+/* base.css — fonts, colour and size variables, reset.
 
-   COLOUR CONTRAST (WCAG 2 contrast ratio, measured with the WCAG relative-
-   luminance formula; AA needs at least 4.5:1 for normal text):
+   COLOUR CONTRAST (WCAG 2 contrast ratio; AA needs at least 4.5:1 for normal
+   text and 3:1 for large text):
 
    Disk numbers
      Disk 1  green  #1E9E4A  with navy  #14213D   4.60:1  (white would be only 3.47:1)
@@ -12,7 +12,11 @@
 
    Page
      Text      #14213D on background #F7F8FA     15.03:1
+     Muted     #4A5160 on background #F7F8FA      7.49:1
      Pegs/base #5B5F66 on background #F7F8FA      6.04:1
+     Accent    #FFFFFF on indigo #4338CA          8.40:1  (selected buttons, active step)
+     Indigo    #2A14B4 on lavender #E3DFFF        9.6:1   (info messages, latest move)
+     Banner    #FFFFFF on dark red #7B0022       12.9:1   (Learning Mode banner)
      Error     #B42318 on white                   6.57:1
      Hint      #175CD3 on white                   5.99:1
      Success   #067647 on white                   5.69:1
@@ -20,6 +24,23 @@
 
    Every disk also shows its NUMBER, so colour is never the only clue
    (important for colour-blind players). */
+
+/* Fonts are stored in assets/fonts (SIL Open Font License, see the OFL files
+   there), so nothing is loaded from other websites and the game works offline.
+   Each file is a "variable" font: one file holds all the weights. */
+@font-face {
+  font-family: "Manrope";
+  src: url("../assets/fonts/manrope-latin.woff2") format("woff2");
+  font-weight: 500 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Epilogue";
+  src: url("../assets/fonts/epilogue-latin.woff2") format("woff2");
+  font-weight: 600 800;
+  font-display: swap;
+}
 
 :root {
   /* Disks: background + number colour */
@@ -29,7 +50,7 @@
   --disk-4: #1F6FEB;  --disk-4-text: #FFFFFF;
   --disk-5: #F08C00;  --disk-5-text: #14213D;
 
-  /* Page */
+  /* Page (from the specification) */
   --bg: #F7F8FA;
   --surface: #FFFFFF;
   --text: #14213D;
@@ -38,6 +59,17 @@
   --peg: #5B5F66;
   --glow: #FFC300;
 
+  /* Design accents */
+  --ink: #191C1E;            /* the dark "hard shadow" under cards and buttons */
+  --surface-low: #F2F4F6;
+  --surface-high: #E6E8EA;
+  --primary: #4338CA;        /* indigo: selected and active things */
+  --primary-strong: #2A14B4;
+  --primary-soft: #E3DFFF;   /* lavender */
+  --secondary-soft: #DAE2FD;
+  --tertiary: #7B0022;       /* dark red: Learning Mode banner */
+  --tertiary-soft: #FFDADB;
+
   /* Message colours: text + light background */
   --error: #B42318;    --error-bg: #FEF3F2;
   --hint: #175CD3;     --hint-bg: #EFF8FF;
@@ -45,7 +77,7 @@
   --warning: #B54708;  --warning-bg: #FFFAEB;
 
   /* Sizes */
-  --radius: 12px;
+  --radius: 14px;
   --gap: clamp(10px, 1.2vw, 28px);
   /* Sizes are built from a BASE value times a SCALE, so the 4K breakpoint
      can change the base and Projector Mode can change the scale. */
@@ -54,11 +86,17 @@
   --font-scale: 1;
   --disk-scale: 1;
   --disk-h: calc(var(--disk-h-base) * var(--disk-scale));
-  --line-w: 1px;   /* card and panel borders */
+  --line-w: 1px;      /* card and panel borders */
   --btn-border: 2px;
-  --base-h: 10px;  /* thickness of the base under each peg */
+  --base-h: 12px;     /* thickness of the base under each peg */
 
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Hard shadows: the signature of the design */
+  --shadow-sm: 0 2px 0 var(--ink);
+  --shadow: 0 3px 0 var(--ink);
+  --shadow-lg: 0 5px 0 var(--ink);
+
+  --font: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-heading: "Epilogue", "Manrope", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
 }
 
@@ -76,13 +114,19 @@ body {
   margin: 0;
   font-family: var(--font);
   font-size: calc(var(--base-font) * var(--font-scale));
-  line-height: 1.4;
+  font-weight: 500;
+  line-height: 1.45;
   color: var(--text);
   background: var(--bg);
 }
 
 h1, h2, h3, p, ol, ul, dl, dd {
   margin: 0;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  line-height: 1.2;
 }
 
 ol, ul {
@@ -121,4 +165,24 @@ code, pre {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ---------- Icons (inline SVG, see the <symbol>s at the top of index.html) ---------- */
+
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.icon {
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }

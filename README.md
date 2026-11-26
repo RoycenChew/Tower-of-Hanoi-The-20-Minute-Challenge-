@@ -15,6 +15,7 @@ the minimum **2ⁿ − 1** moves.
 **Live site:** <https://roycenchew.github.io/Tower-of-Hanoi-The-20-Minute-Challenge-/>
 
 Vanilla HTML, CSS and JavaScript (ES modules). No frameworks, no dependencies, no build step.
+Fonts (Epilogue and Manrope) and icons are stored in the project, so the game also works offline.
 
 ---
 
@@ -42,7 +43,7 @@ Vanilla HTML, CSS and JavaScript (ES modules). No frameworks, no dependencies, n
 
 **Learning Mode**
 - Step-by-step replay of the optimal solution on its own board (your game is untouched):
-  Previous, Next, Autoplay, Pause, speed 0.5× / 1× / 2×, Reset.
+  Previous, Next, Autoplay, Pause, speed 0.5× / 1× / 2×, Reset, or click any step to jump to it.
 - For each step: the stack operations, the three stacks, the **call stack** and the
   **recursion call tree**, plus the sub-tower being moved.
 - Theory cards: why the minimum is 2ⁿ − 1, why every peg is a stack, and sub-towers.
@@ -187,7 +188,7 @@ npm test
 node --test "tests/*.test.js"
 ```
 
-**147 unit tests** across 14 files. Test cases from the report's test table appear in the
+**151 unit tests** across 14 files. Test cases from the report's test table appear in the
 test names:
 
 | ID | What is tested | File |
@@ -210,7 +211,8 @@ covering the disks, accessibility names, focus rings, colour contrast).
 ```
 index.html                    the page (with Open Graph / Twitter preview tags)
 assets/                       poster (PNG + WebP), welcome banner crop, link-preview image
-css/base.css                  colour variables (with contrast ratios), size variables, reset
+assets/fonts/                 Epilogue + Manrope (woff2) with their OFL licences
+css/base.css                  fonts, colour variables (with contrast ratios), size variables, reset, icons
 css/layout.css                regions, breakpoints, timer warnings, 4K, Projector Mode
 css/board.css                 pegs, disks, selection, hint pulse, drag, shake
 css/components.css            buttons, message bar, panels, welcome, modals, Learning Mode
@@ -244,7 +246,7 @@ js/view/
 
 tests/                        unit tests (npm test)
 docs/screenshots/             screenshots for the report
-docs/                         assignment brief (kept local, not in git)
+docs/                         assignment brief and design reference (kept local, not in git)
 ```
 
 ## Accessibility
@@ -254,6 +256,14 @@ docs/                         assignment brief (kept local, not in git)
 - A full game can be played with the keyboard only, with a visible focus ring on every control.
 - Text contrast is at least 4.5:1 (ratios for every disk colour are listed in `css/base.css`).
 - `prefers-reduced-motion`: no animations or confetti; moves still happen instantly.
+
+## Credits
+
+- Visual design based on the author's own mock-up (`docs/design/`, kept local).
+- Fonts: [Epilogue](https://github.com/Etcetera-Type-Co/Epilogue) and
+  [Manrope](https://github.com/googlefonts/manrope), SIL Open Font License 1.1
+  (licence files in `assets/fonts/`).
+- Poster: made by the author.
 
 ## Author
 

@@ -253,3 +253,49 @@ test('every change is announced with learn:step; moves say which disk to animate
   learning.close();
   assert.equal(events.at(-1).state.isOpen, false);
 });
+
+// ---------- Click a step to jump to it (seek) ----------
+
+test('seek(k) jumps to the board after k steps, forwards and backwards', () => {
+  const { learning, state } = setup();
+  learning.seek(3);
+  assert.equal(state().index, 3);
+  assert.deepEqual(state().snapshot.pegs, [[3], [2, 1], []]);
+  assert.deepEqual(state().callStack.map(callLabel), ['hanoi(3, A→C)', 'hanoi(2, A→B)', 'hanoi(1, C→B)']);
+  learning.seek(7);
+  assert.deepEqual(state().snapshot.pegs, [[], [], [3, 2, 1]]);
+  assert.equal(state().atEnd, true);
+  learning.seek(1); // backwards through the solved state
+  assert.deepEqual(state().snapshot.pegs, [[3, 2], [], [1]]);
+  learning.seek(0);
+  assert.deepEqual(state().snapshot.pegs, [[3, 2, 1], [], []]);
+  assert.equal(state().atStart, true);
+});
+
+test('seek ends on exactly the same board as stepping with Next', () => {
+  const stepped = setup(5);
+  const jumped = setup(5);
+  for (let i = 0; i < 19; i++) stepped.learning.next();
+  jumped.learning.seek(19);
+  assert.deepEqual(jumped.state().snapshot, stepped.state().snapshot);
+});
+
+test('seek pauses autoplay, is not animated, and ignores bad steps', () => {
+  const { learning, events, timers, state } = setup();
+  learning.play();
+  events.length = 0;
+  learning.seek(4);
+  assert.equal(state().playing, false);
+  assert.equal(timers.pending().length, 0);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].moved, null, 'a jump is drawn at once, without animation');
+  for (const bad of [-1, 8, 2.5, NaN]) learning.seek(bad);
+  assert.equal(state().index, 4);
+});
+
+test('after Time\'s up (lock), seek does nothing', () => {
+  const { learning, state } = setup();
+  learning.lock();
+  learning.seek(5);
+  assert.equal(state().index, 0);
+});
