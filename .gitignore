@@ -4,3 +4,6 @@ Thumbs.db
 .vscode/
 *.log
 .claude/settings.local.json
+
+# Assignment brief stays local only
+docs/*.pdf

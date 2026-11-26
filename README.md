@@ -5,7 +5,7 @@ Solve the Tower of Hanoi with 3, 4 or 5 disks against a 20-minute clock, and use
 Learning Mode to see how **stacks (LIFO)** and **recursion** solve the puzzle in
 the minimum **2ⁿ − 1** moves.
 
-**Live site:** _coming soon (GitHub Pages URL)_
+**Live site:** <https://roycenchew.github.io/Tower-of-Hanoi-The-20-Minute-Challenge-/>
 
 ## Features
 _To be completed in Phase 6._
