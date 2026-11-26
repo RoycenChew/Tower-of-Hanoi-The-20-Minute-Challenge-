@@ -9,6 +9,7 @@ import { solve } from '../js/model/Solver.js';
 import { ChallengeTimer, TimerState, CHALLENGE_MS } from '../js/model/ChallengeTimer.js';
 import { GameController, Screen, SUMMARY_DELAY_MS, PRESS_R_AGAIN } from '../js/controller/GameController.js';
 import { AnimationQueue } from '../js/controller/AnimationQueue.js';
+import { LearningMode } from '../js/controller/LearningMode.js';
 
 const MIN = 60 * 1000;
 /** Let pending promise callbacks run (an animation that just finished, etc.). */
@@ -83,18 +84,39 @@ function setup({ realAnimations = false } = {}) {
     ? new AnimationQueue()
     : { busy: false, add: (job) => Promise.resolve(job()).then(() => true), clear() {} };
 
+  // Learning Mode with its own fake autoplay timers.
+  const learnTimers = [];
+  const learning = new LearningMode({
+    bus,
+    setTimeout: (fn, ms) => { learnTimers.push({ fn, ms, done: false }); return learnTimers.length; },
+    clearTimeout: (id) => { if (learnTimers[id - 1]) learnTimers[id - 1].done = true; },
+  });
+
   const controller = new GameController({
-    bus, game, board, ui, modals, stats, timer, queue,
+    bus, game, board, ui, modals, stats, timer, queue, learning,
     now: () => time,
     setTimeout: (fn, ms) => timeouts.push({ fn, ms }),
-    stopLearning: () => log.push(['stopLearning']),
+    stopLearning: () => { log.push(['stopLearning']); learning.lock(); },
     cancelDrag: () => log.push(['cancelDrag']),
   });
 
+  const advance = (ms) => { time += ms; tick?.(); };
   return {
-    game, stats, timer, controller, ui, modals, log, timeouts, board, queue, running,
+    game, stats, timer, controller, ui, modals, log, timeouts, board, queue, running, learning,
     /** Move the clock forward and let the timer tick once. */
-    advance(ms) { time += ms; tick?.(); },
+    advance,
+    /**
+     * Let the next Learning Mode autoplay step happen: REAL time passes (the
+     * challenge clock ticks) and then the step runs. Returns false if none is waiting.
+     */
+    runLearnTimer() {
+      const t = learnTimers.find((x) => !x.done);
+      if (!t) return false;
+      advance(t.ms);
+      t.done = true;
+      t.fn();
+      return true;
+    },
     /** Finish the oldest running animation and let the controller react. */
     async finishAnimation() { running.shift()?.(); await settle(); },
     click: (...pegs) => pegs.forEach((peg) => controller.handlePegClick(peg)),
@@ -251,7 +273,6 @@ test('solving 3 disks: victory modal with "Next Level: 4 Disks"; the timer keeps
   assert.equal(modals.victory.hints, 1);
   assert.equal(modals.victory.score, 290); // 100 × 3 stars − 10 for the hint
   assert.equal(modals.victory.timeMs, 90_000);
-  assert.deepEqual(modals.victory.optimal.slice(0, 1), ['Disk 1 from Peg A to Peg C']);
   assert.equal(stats.puzzlesCompleted, 1);
   assert.equal(timer.state, TimerState.RUNNING);
 
@@ -603,4 +624,127 @@ test('Esc puts a lifted disk back down', () => {
   assert.equal(controller.selectedPeg, 0);
   controller.cancelSelection();
   assert.equal(controller.selectedPeg, null);
+});
+
+// =====================================================================
+// Phase 5: Learning Mode inside the challenge.
+// =====================================================================
+
+test('Learning Mode is locked before Start', () => {
+  const { controller, learning, ui } = setup();
+  controller.openLearning();
+  assert.equal(learning.isOpen, false);
+  assert.equal(controller.screen, Screen.WELCOME);
+  assert.equal(ui.message.text, 'Click "Start Challenge" to begin.');
+});
+
+test('TC-05: Learning Mode autoplay plays in order while the 20-minute timer keeps running', () => {
+  const { timer, controller, learning, advance, runLearnTimer } = setup();
+  controller.start();
+  advance(MIN);
+  controller.openLearning();
+  assert.equal(controller.screen, Screen.LEARNING);
+  assert.equal(learning.diskCount, 3);
+
+  const before = timer.remaining();
+  learning.play();
+  const boards = [];
+  while (runLearnTimer()) boards.push(learning.state().snapshot.pegs);
+
+  assert.equal(boards.length, 7, 'all 7 steps, in order');
+  assert.deepEqual(boards.at(-1), [[], [], [3, 2, 1]]);
+  assert.equal(learning.playing, false, 'autoplay stopped at the end');
+  assert.equal(timer.state, TimerState.RUNNING);
+  assert.equal(timer.remaining(), before - 7 * 1200, 'the challenge clock ran during autoplay');
+});
+
+test('TC-05: pausing (or stepping through) the demo never freezes the challenge timer', () => {
+  const { timer, controller, learning, advance, runLearnTimer } = setup();
+  controller.start();
+  controller.openLearning();
+  learning.play();
+  runLearnTimer();
+  learning.pause();
+  const before = timer.remaining();
+  advance(2 * MIN); // the demo is paused for 2 minutes...
+  assert.equal(timer.remaining(), before - 2 * MIN, '...and the clock kept going');
+  learning.next();
+  learning.previous();
+  advance(MIN);
+  assert.equal(timer.remaining(), before - 3 * MIN);
+  assert.equal(timer.state, TimerState.RUNNING);
+});
+
+test("Learning Mode never touches the player's game or the Stats", () => {
+  const { game, stats, controller, learning, click, runLearnTimer } = setup();
+  controller.start();
+  click(0, 2, 0, 1); // the player's own game: 2 moves
+  controller.hint();
+  const gameBefore = game.snapshot();
+  const statsBefore = stats.summary();
+
+  controller.openLearning(5);
+  learning.play();
+  while (runLearnTimer()); // all 31 demo moves
+  assert.equal(learning.index, 31);
+
+  assert.deepEqual(game.snapshot(), gameBefore, 'game board untouched');
+  assert.deepEqual(stats.summary(), statsBefore, 'no Stats method was called');
+
+  controller.closeLearning();
+  assert.equal(controller.screen, Screen.PLAYING);
+  assert.equal(learning.isOpen, false);
+  assert.deepEqual(game.snapshot(), gameBefore, 'Back to Game: exactly as it was');
+  click(2, 1); // and the game goes on from there (Disk 1 onto Disk 2)
+  assert.equal(game.moveCount, 3);
+});
+
+test('game input is ignored while Learning Mode is open', () => {
+  const { game, controller, click } = setup();
+  controller.start();
+  controller.openLearning();
+  click(0, 2);
+  controller.hint();
+  controller.restart();
+  controller.setDifficulty(5);
+  assert.equal(game.moveCount, 0);
+  assert.equal(game.hintsUsed, 0);
+  assert.equal(game.diskCount, 3);
+});
+
+test('"See Optimal Solution" opens Learning Mode with the solved puzzle\'s disk count', async () => {
+  const { controller, learning, modals, solveByClicks } = setup();
+  controller.start();
+  controller.setDifficulty(4);
+  solveByClicks(4);
+  await settle();
+  assert.notEqual(modals.victory, null);
+
+  controller.openLearning(controller.diskCount);
+  assert.equal(controller.screen, Screen.LEARNING);
+  assert.equal(modals.victory, null, 'victory modal closed');
+  assert.equal(learning.diskCount, 4);
+  assert.equal(learning.total, 15);
+  controller.closeVictory(); // the dialog's late close event must not change the screen
+  assert.equal(controller.screen, Screen.LEARNING);
+});
+
+test("TC-03: Time's up during Learning Mode autoplay halts it at once", () => {
+  const { controller, learning, modals, advance, runLearnTimer } = setup();
+  controller.start();
+  controller.openLearning();
+  learning.play();
+  runLearnTimer();
+  runLearnTimer();
+  assert.equal(learning.index, 2);
+
+  advance(CHALLENGE_MS);
+  assert.equal(controller.screen, Screen.TIME_UP);
+  assert.equal(learning.playing, false, 'autoplay halted');
+  assert.equal(learning.locked, true);
+  assert.equal(runLearnTimer(), false, 'no demo step is waiting');
+  learning.next();
+  learning.play();
+  assert.equal(learning.index, 2, 'demo controls are refused');
+  assert.equal(modals.summary, null); // the summary follows 1.5 s later, as usual
 });

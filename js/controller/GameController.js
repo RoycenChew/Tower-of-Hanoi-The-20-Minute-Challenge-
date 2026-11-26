@@ -14,7 +14,6 @@
 // animation is queued afterwards and only shows what already happened.
 
 import { MESSAGES, describeMove, validateMove } from '../model/Rules.js';
-import { solve } from '../model/Solver.js';
 import { AnimationQueue } from './AnimationQueue.js';
 
 /** Screen states (section 5.1). */
@@ -39,6 +38,7 @@ export class GameController {
   #stats;
   #timer;
   #queue;
+  #learning;
   #now;
   #setTimeout;
   #stopLearning;
@@ -68,13 +68,15 @@ export class GameController {
    * @param {Stats} deps.stats
    * @param {ChallengeTimer} deps.timer
    * @param {AnimationQueue} [deps.queue]    runs move animations one at a time
-   * @param {() => void} [deps.stopLearning] stops Learning Mode autoplay (Phase 5)
+   * @param {LearningMode} [deps.learning]   the step-by-step walkthrough
+   * @param {() => void} [deps.stopLearning] stops Learning Mode when time runs out
    * @param {() => void} [deps.cancelDrag]   cancels a drag in progress (set by Input)
    */
   constructor({
     bus, game, board, ui, modals, stats, timer,
     queue = new AnimationQueue(),
-    stopLearning = () => {},
+    learning = null,
+    stopLearning = () => learning?.lock(),
     cancelDrag = () => {},
     now = () => Date.now(),
     setTimeout = (fn, ms) => globalThis.setTimeout(fn, ms),
@@ -86,6 +88,7 @@ export class GameController {
     this.#stats = stats;
     this.#timer = timer;
     this.#queue = queue;
+    this.#learning = learning;
     this.#stopLearning = stopLearning;
     this.#cancelDrag = cancelDrag;
     this.#now = now;
@@ -103,6 +106,11 @@ export class GameController {
     bus.on('timer:warn5', () => this.#warn('warn5', '5 minutes remaining!', 'warning'));
     bus.on('timer:warn1', () => this.#warn('warn1', 'Final minute!', 'error'));
     bus.on('timer:expired', () => this.handleExpired());
+  }
+
+  /** Number of disks in the current puzzle. */
+  get diskCount() {
+    return this.#game.diskCount;
   }
 
   /** Input.js registers how to cancel a drag (needed when time runs out). */
@@ -329,6 +337,32 @@ export class GameController {
     if (this.screen === Screen.VICTORY) this.screen = Screen.PLAYING;
   }
 
+  // ===================== Learning Mode =====================
+
+  /**
+   * Open the step-by-step walkthrough. The player's game is left exactly as
+   * it is (Learning Mode has its own board), and the challenge clock keeps
+   * running: nothing here touches the timer.
+   * @param {number} diskCount  3 by default; "See Optimal Solution" passes the solved puzzle's size
+   */
+  openLearning(diskCount = 3) {
+    if (!this.#learning || !this.#inputAllowed()) return;
+    this.selectedPeg = null;
+    this.screen = Screen.LEARNING;
+    this.#modals.closeAll(); // e.g. the victory modal, when opened from "See Optimal Solution"
+    this.render();
+    this.#learning.open(diskCount);
+  }
+
+  /** "Back to Game": the game board is shown again, untouched. */
+  closeLearning() {
+    if (this.screen !== Screen.LEARNING) return;
+    this.#learning.close();
+    this.screen = Screen.PLAYING;
+    this.render();
+    this.#ui.clearMessage();
+  }
+
   // ===================== private =====================
 
   /**
@@ -343,6 +377,9 @@ export class GameController {
     if (this.screen === Screen.WELCOME) {
       this.#ui.showMessage(MESSAGES.NOT_STARTED, 'error');
       return false;
+    }
+    if (this.screen === Screen.LEARNING) {
+      return false; // the game board is hidden; Learning Mode has its own controls
     }
     if (this.#queue.busy) {
       // Refused, but the message is shown only once per animation so it
@@ -453,7 +490,6 @@ export class GameController {
       moves: game.moveCount,
       hints: game.hintsUsed,
       nextLevel: n < 5 ? n + 1 : null, // null after 5 disks: every level cleared
-      optimal: solve(n).map(describeMove),
     };
   }
 

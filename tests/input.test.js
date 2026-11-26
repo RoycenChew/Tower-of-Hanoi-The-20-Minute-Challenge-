@@ -38,6 +38,17 @@ test('ignored while typing in the nickname box (or any text field)', () => {
   assert.equal(shortcutFor(key('h', { target: { tagName: 'DIV', isContentEditable: true } })), null);
 });
 
+test('in Learning Mode: Space = play/pause, Left/Right = previous/next; game keys are off', () => {
+  const learning = { learning: true };
+  assert.deepEqual(shortcutFor(key(' '), learning), { action: 'learn-toggle' });
+  assert.deepEqual(shortcutFor(key('ArrowLeft'), learning), { action: 'learn-prev' });
+  assert.deepEqual(shortcutFor(key('ArrowRight'), learning), { action: 'learn-next' });
+  assert.deepEqual(shortcutFor(key('ArrowRight', { repeat: true }), learning), { action: 'learn-next' }, 'holding the arrow steps on');
+  for (const k of ['a', '1', 'h', 'r', 'u', 'Escape']) assert.equal(shortcutFor(key(k), learning), null, k);
+  assert.equal(shortcutFor(key('z', { ctrlKey: true }), learning), null);
+  assert.equal(shortcutFor(key(' ')), null, 'Space does nothing in the game itself');
+});
+
 test('ignored while a dialog is open or the welcome card is showing', () => {
   assert.equal(shortcutFor(key('a'), { dialogOpen: true }), null);
   assert.equal(shortcutFor(key('z', { ctrlKey: true }), { dialogOpen: true }), null);

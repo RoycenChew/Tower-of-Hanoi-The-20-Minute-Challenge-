@@ -60,7 +60,7 @@ js/controller/
   GameController.js           screen states, input gate, challenge flow, Time's up sequence
   Input.js                    clicks, drag-and-drop (Pointer Events) and keyboard shortcuts
   AnimationQueue.js           runs move animations one at a time (busy / clear)
-  LearningMode.js             step-by-step walkthrough (Phase 5)
+  LearningMode.js             step-by-step walkthrough on its own board (Previous/Next/Autoplay/Pause)
 
 js/view/
   Board.js                    draws pegs and disks; move, drag and return animations
@@ -69,7 +69,7 @@ js/view/
   MessageBar.js               message priority: timer warnings always get 4 s
   Modals.js                   welcome card, victory, Time's up, final summary
   DebugPanel.js               timer jumps, loaded only with ?debug=1
-  LearningPanel.js            learning mode panel (Phase 5)
+  LearningPanel.js            learning mode: demo board, steps, Stack panel, call stack, call tree
   Sound.js                    sound effects (Phase 6)
 
 tests/                        unit tests (npm test)
@@ -80,7 +80,9 @@ tests/                        unit tests (npm test)
   messagebar                  warning priority
   animationqueue              one animation at a time, clear()
   input                       keyboard shortcuts and when they are ignored
+  learning                    the walkthrough: 7 PDF steps, Previous/Next, autoplay, call stack, sub-tower
 docs/                         assignment brief (kept local, not in git)
+docs/screenshots/             screenshots for the report (desktop, phone, Learning Mode, n = 3 call tree)
 ```
 
 ## Author

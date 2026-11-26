@@ -12,21 +12,30 @@ export const DRAG_THRESHOLD_PX = 6;
  * access), so it can be unit-tested.
  *
  * Shortcuts are IGNORED while typing in a text box, while a dialog is open
- * and while the welcome card is showing.
+ * and while the welcome card is showing. In Learning Mode only the demo
+ * keys work (Space, Left, Right); the game keys are switched off.
  *
  * @param {{key: string, ctrlKey?: boolean, altKey?: boolean, metaKey?: boolean,
  *          repeat?: boolean, target?: object}} event
- * @param {{dialogOpen?: boolean, welcomeVisible?: boolean}} context
+ * @param {{dialogOpen?: boolean, welcomeVisible?: boolean, learning?: boolean}} context
  * @returns {null | {action: string, peg?: number}}
  */
-export function shortcutFor(event, { dialogOpen = false, welcomeVisible = false } = {}) {
+export function shortcutFor(event, { dialogOpen = false, welcomeVisible = false, learning = false } = {}) {
   if (dialogOpen || welcomeVisible) return null;
   const target = event.target;
   if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) {
     return null;
   }
-  if (event.altKey || event.metaKey || event.repeat) return null;
+  if (event.altKey || event.metaKey || (event.ctrlKey && learning)) return null;
 
+  if (learning) {
+    if (event.key === ' ' && !event.repeat) return { action: 'learn-toggle' };
+    if (event.key === 'ArrowLeft') return { action: 'learn-prev' };   // holding the key repeats
+    if (event.key === 'ArrowRight') return { action: 'learn-next' };
+    return null;
+  }
+
+  if (event.repeat) return null;
   const key = event.key.toLowerCase();
   if (event.ctrlKey) {
     // Ctrl+Z is our only Ctrl shortcut; Ctrl+R etc. stay with the browser.
@@ -48,6 +57,7 @@ export class Input {
   #doc;
   #board;
   #controller;
+  #learning;
   /** The drag in progress: { pointerId, peg, disk, x0, y0, started } or null. */
   #drag = null;
   /** After a real drag, the browser still fires a "click"; swallow it once. */
@@ -57,11 +67,13 @@ export class Input {
    * @param {Document} doc
    * @param {Board} board
    * @param {GameController} controller
+   * @param {LearningMode} learning
    */
-  constructor(doc, board, controller) {
+  constructor(doc, board, controller, learning) {
     this.#doc = doc;
     this.#board = board;
     this.#controller = controller;
+    this.#learning = learning;
     const onClick = (id, action) => doc.getElementById(id).addEventListener('click', action);
 
     // ---- Pegs: click (or Enter/Space, because they are real <button>s) ----
@@ -110,7 +122,22 @@ export class Input {
     // ---- Victory modal ----
     onClick('btn-next-level', () => controller.nextLevel());
     onClick('btn-play-again', () => controller.playAgain());
+    onClick('btn-see-optimal', () => controller.openLearning(controller.diskCount));
     doc.getElementById('victory').addEventListener('close', () => controller.closeVictory());
+
+    // ---- Learning Mode ----
+    onClick('btn-learn', () => controller.openLearning(3)); // the demo starts with 3 disks
+    onClick('btn-back', () => controller.closeLearning());
+    onClick('btn-learn-prev', () => learning.previous());
+    onClick('btn-learn-next', () => learning.next());
+    onClick('btn-learn-play', () => learning.togglePlay());
+    onClick('btn-learn-reset', () => learning.reset());
+    doc.querySelectorAll('[data-speed]').forEach((button) => {
+      button.addEventListener('click', () => learning.setSpeed(Number(button.dataset.speed)));
+    });
+    doc.querySelectorAll('[data-learn-disks]').forEach((button) => {
+      button.addEventListener('click', () => learning.setDiskCount(Number(button.dataset.learnDisks)));
+    });
 
     // ---- Final summary: a brand-new challenge means a brand-new page (and clock) ----
     onClick('btn-new-challenge', () => doc.location.reload());
@@ -216,12 +243,18 @@ export class Input {
     const shortcut = shortcutFor(event, {
       dialogOpen: this.#doc.querySelector('dialog[open]') !== null,
       welcomeVisible: !this.#doc.getElementById('welcome').hidden,
+      learning: this.#learning.isOpen,
     });
     if (!shortcut) return;
+    // Also stops Space from "clicking" the focused button a second time.
     event.preventDefault();
 
     const c = this.#controller;
+    const learn = this.#learning;
     switch (shortcut.action) {
+      case 'learn-toggle': learn.togglePlay(); break;
+      case 'learn-prev': learn.previous(); break;
+      case 'learn-next': learn.next(); break;
       case 'peg': c.handlePegClick(shortcut.peg); break;
       case 'deselect': c.cancelSelection(); break;
       case 'undo': c.undo(); break;

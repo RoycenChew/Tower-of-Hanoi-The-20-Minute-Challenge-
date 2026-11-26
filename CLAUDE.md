@@ -34,9 +34,17 @@ The full spec lives in `docs/` (plan + assignment PDF:
 
 ## File structure
 - `js/model/`: Stack, Rules, GameState, Solver, ChallengeTimer, Stats, EventBus (no DOM).
-- `js/controller/`: GameController (screen states, single input gate `#inputAllowed()`, Time's up sequence, drag API), Input (clicks, Pointer Events drag, keyboard; `shortcutFor()` is pure), AnimationQueue (one job at a time, `busy`, `clear()`), LearningMode (Phase 5).
-- `js/view/`: Board (render + FLIP move/return animations + drag visuals), UIOverlay, MessageBar (warning priority), Modals (welcome, victory, Time's up, summary), Confetti, DebugPanel (?debug=1 only, dynamic import), LearningPanel (Phase 5), Sound (Phase 6).
-- `tests/`: stack, rules, gamestate, solver, timer, stats, eventbus, controller, challenge, messagebar, animationqueue, input.
+- `js/controller/`: GameController (screen states, single input gate `#inputAllowed()`, Time's up sequence, drag API), Input (clicks, Pointer Events drag, keyboard; `shortcutFor()` is pure), AnimationQueue (one job at a time, `busy`, `clear()`), LearningMode (own GameState with a null bus, emits `learn:step`; no DOM).
+- `js/view/`: Board (render + FLIP move/return animations + drag visuals), UIOverlay, MessageBar (warning priority), Modals (welcome, victory, Time's up, summary), Confetti, DebugPanel (?debug=1 only, dynamic import), LearningPanel (listens to `learn:step`), Sound (Phase 6).
+- `tests/`: stack, rules, gamestate, solver, timer, stats, eventbus, controller, challenge, messagebar, animationqueue, input, learning.
+- `docs/screenshots/`: report screenshots (committed). Regenerate with the headless Chrome check script if the UI changes.
+
+## Learning Mode rules (Phase 5)
+- Uses its OWN GameState; never calls Stats; never touches the timer. Pause stops only the demo.
+- Next = `tryMove()` (pop + push), Previous = `undo()`. The "no undo after solving" rule lives ONLY in `GameController.undo()` (the real game), never in GameState, so Previous works at the final step.
+- `index` = steps done (0 … 2ⁿ − 1); the highlighted step is the one just made.
+- Sub-tower = innermost call on the call stack with n ≥ 2; its disks get a dashed outline + caption.
+- Disabled until Start. Time's up calls `learning.lock()`. While Learning Mode is open, the game's difficulty buttons are hidden and game input is ignored.
 - Report test IDs used in test names: TC-01 empty source, TC-02 larger on smaller, TC-04 undo after 5 moves, TC-14 Hint, TC-16 difficulty change, TC-18 Restart, TC-22 timeout during drag, TC-23 timeout during animation, TC-25 rapid clicks during animation.
 
 ## Animation and input rules (Phase 4)
@@ -58,6 +66,13 @@ The full spec lives in `docs/` (plan + assignment PDF:
 - No stray `console.log` in finished code.
 - No layout shift: messages use the fixed-height message bar; warnings change colours only; overlays/borders are fixed layers. Verify with headless Chrome rect comparisons.
 - The welcome card must never cover Peg A's disks (`Modals.fitWelcome()` collapses the rules if needed).
+
+## Poster (assets/poster.png) — Phase 6 work
+- NEVER use it as a gameplay background (its disk colours differ from the assignment's and would hurt contrast).
+- Make `assets/poster.webp` (< 200 KB); keep the PNG only as a fallback.
+- Open Graph + Twitter meta tags (og:title, og:description, og:image with the ABSOLUTE GitHub Pages URL) so shared links show the poster.
+- Welcome card: show it as a banner only at >= 1024 px; hidden on phones; alt text; `loading="eager"` + width/height (no layout shift). The card must still never cover Peg A's disks.
+- Never show the poster during gameplay or in Learning Mode.
 
 ## Git
 - Individual assignment: NEVER add Claude as co-author or contributor (no `Co-Authored-By` lines, no AI attribution in commits or PRs).

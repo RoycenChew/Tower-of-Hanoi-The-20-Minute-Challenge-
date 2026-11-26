@@ -63,7 +63,8 @@ export class Board {
       button.querySelector('.disks').replaceChildren(...diskElements);
 
       button.classList.toggle('is-selected', isSelected);
-      button.setAttribute('aria-pressed', String(isSelected));
+      // Game pegs are buttons; the Learning Mode demo pegs are not clickable.
+      if (button.tagName === 'BUTTON') button.setAttribute('aria-pressed', String(isSelected));
       button.setAttribute('aria-label', describePeg(peg, disks, isSelected));
     });
   }
@@ -73,6 +74,11 @@ export class Board {
   /** Where the top disk of a peg is on screen right now (the "First" of FLIP). */
   measureTopDisk(peg) {
     return this.#topDisk(peg)?.getBoundingClientRect() ?? null;
+  }
+
+  /** Where a given disk is drawn right now (used by the Learning Mode demo). */
+  measureDisk(disk) {
+    return this.#root.querySelector(`.disk[data-disk="${disk}"]`)?.getBoundingClientRect() ?? null;
   }
 
   /**

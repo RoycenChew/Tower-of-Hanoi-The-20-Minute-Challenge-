@@ -32,7 +32,7 @@ export class UIOverlay {
       howLast: byId('how-last'),
       howStacks: byId('how-stacks'),
       howMinimum: byId('how-minimum'),
-      controlButtons: ['btn-hint', 'btn-undo', 'btn-restart'].map(byId),
+      controlButtons: ['btn-hint', 'btn-undo', 'btn-restart', 'btn-learn'].map(byId),
       difficultyButtons: [...doc.querySelectorAll('[data-disks]')],
     };
 

@@ -494,3 +494,342 @@
 #metric-moves {
   transform-origin: left center;
 }
+
+.welcome__note {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+.modal__wide {
+  width: 100%;
+}
+
+/* ---------- Learning Mode ---------- */
+
+.learning {
+  display: grid;
+  gap: var(--gap);
+}
+
+/* In Learning Mode the game's difficulty buttons are hidden, so there is
+   only one "3 / 4 / 5 Disks" choice on screen (the demo's). */
+.is-learning .topbar .difficulty {
+  display: none;
+}
+
+.learning__banner {
+  padding: 0.6em 1em;
+  font-weight: 700;
+  color: var(--hint);
+  background: var(--hint-bg);
+  border: 2px solid var(--hint);
+  border-radius: var(--radius);
+}
+
+.learning__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.learning__title {
+  margin-right: auto;
+  font-size: 1.3em;
+}
+
+.learning__grid,
+.learning__main,
+.learning__side {
+  display: grid;
+  gap: var(--gap);
+  align-content: start;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .learning__grid {
+    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+    align-items: start;
+  }
+}
+
+/* Fixed height (two lines), so the caption never moves the board. */
+.learning__subtower {
+  display: flex;
+  align-items: center;
+  min-height: calc(2 * 1.35em);
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+/* The demo board is watch-only. */
+.board--demo .peg,
+.board--demo .disk {
+  cursor: default;
+}
+
+.board--demo .disk {
+  touch-action: auto;
+}
+
+/* Every disk of the sub-tower being moved gets a dashed outline. */
+.disk.in-subtower {
+  outline: 3px dashed var(--text);
+  outline-offset: 2px;
+}
+
+.learning__controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (min-width: 600px) {
+  .learning__controls {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.learning__speed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.learning__label {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.learning__count {
+  font-size: 1.2em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress {
+  height: 10px;
+  margin: 0.3em 0;
+  overflow: hidden;
+  background: var(--line);
+  border-radius: 999px;
+}
+
+/* The bar fills with a transform (cheap to animate), not by changing its width. */
+.progress__fill {
+  height: 100%;
+  background: var(--hint);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 300ms ease;
+}
+
+.learning__current {
+  min-height: calc(2 * 1.4em);
+  font-weight: 600;
+}
+
+.steps {
+  position: relative; /* so a step's offsetTop is measured inside the list */
+  max-height: 14em;
+  overflow-y: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.steps li {
+  padding: 0.25em 0.5em;
+  border-left: 4px solid transparent;
+}
+
+.steps .is-done {
+  color: var(--muted);
+}
+
+.steps .is-current {
+  font-weight: 700;
+  color: var(--text);
+  background: var(--hint-bg);
+  border-left-color: var(--hint);
+}
+
+/* Phone tabs: Stack | Recursion. From 600 px both panels show. */
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab {
+  flex: 1;
+  min-height: 48px;
+  font-weight: 700;
+  background: var(--surface);
+  border: 2px solid var(--text);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.tab[aria-selected="true"] {
+  color: #FFFFFF;
+  background: var(--text);
+}
+
+.learning__side[data-tab="stack"] .learn-card--recursion,
+.learning__side[data-tab="recursion"] .learn-card--stack {
+  display: none;
+}
+
+@media (min-width: 600px) {
+  .tabs {
+    display: none;
+  }
+
+  .learning__side[data-tab] .learn-card--recursion,
+  .learning__side[data-tab] .learn-card--stack {
+    display: grid;
+  }
+}
+
+.learn-card {
+  display: grid;
+  /* minmax(0, 1fr): the card may be narrower than a wide call tree, so the
+     tree scrolls inside its own box instead of stretching the whole page. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.6em;
+  padding: 1em;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.learn-card__title {
+  font-size: 1.1em;
+}
+
+/* Call stack: blocks stacked bottom -> top (column-reverse puts the first, oldest call at the bottom). */
+.callstack {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+}
+
+.callstack__block {
+  padding: 0.4em 0.8em;
+  font-family: var(--mono);
+  background: var(--bg);
+  border: 2px solid var(--peg);
+  border-radius: 8px;
+}
+
+.callstack__block.is-top {
+  font-weight: 700;
+  background: var(--hint-bg);
+  border-color: var(--hint);
+}
+
+.callstack__note {
+  font-family: var(--font);
+  font-weight: 600;
+  color: var(--hint);
+}
+
+.callstack__empty {
+  color: var(--muted);
+}
+
+/* Call tree (SVG). Wide trees scroll inside this box, never the page. */
+.tree > summary {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tree__box {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.tree__box svg {
+  display: block;
+  width: 100%;
+  min-width: calc(var(--cols) * 64px); /* keeps the labels readable on phones */
+  max-width: calc(var(--cols) * 120px);
+  height: auto;
+  font-family: var(--mono);
+}
+
+.tree-edge {
+  stroke: var(--line);
+  stroke-width: 3;
+}
+
+.tree-edge.is-path {
+  stroke: var(--hint);
+}
+
+.tree-node rect {
+  fill: var(--surface);
+  stroke: var(--peg);
+  stroke-width: 2;
+}
+
+.tree-node text {
+  font-size: 15px;
+  font-weight: 700;
+  fill: var(--text);
+}
+
+.tree-node.is-done rect {
+  fill: var(--bg);
+  stroke: var(--line);
+}
+
+.tree-node.is-done text {
+  fill: var(--muted);
+}
+
+.tree-node.is-path rect {
+  stroke: var(--hint);
+  stroke-width: 3;
+}
+
+.tree-node.is-active rect {
+  fill: var(--hint);
+  stroke: var(--hint);
+}
+
+.tree-node.is-active text {
+  fill: #FFFFFF;
+}
+
+/* Theory cards */
+.theory p {
+  line-height: 1.5;
+}
+
+.theory__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.theory__table caption {
+  padding-bottom: 0.3em;
+  font-weight: 700;
+  text-align: left;
+}
+
+.theory__table th,
+.theory__table td {
+  padding: 0.25em 0.5em;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.theory__table .is-current td {
+  font-weight: 800;
+  background: var(--hint-bg);
+}

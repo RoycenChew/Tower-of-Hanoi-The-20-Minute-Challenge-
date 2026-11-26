@@ -13,7 +13,9 @@ import { Stats } from './model/Stats.js';
 import { Board } from './view/Board.js';
 import { UIOverlay } from './view/UIOverlay.js';
 import { Modals } from './view/Modals.js';
+import { LearningPanel } from './view/LearningPanel.js';
 import { GameController } from './controller/GameController.js';
+import { LearningMode } from './controller/LearningMode.js';
 import { Input } from './controller/Input.js';
 
 const bus = new EventBus();
@@ -24,8 +26,13 @@ const stats = new Stats();
 const board = new Board(document.getElementById('board'));
 const ui = new UIOverlay(document);
 const modals = new Modals(document);
-const controller = new GameController({ bus, game, board, ui, modals, stats, timer });
-new Input(document, board, controller);
+
+// Learning Mode: its own board and state; it talks to its panel via 'learn:step'.
+const learning = new LearningMode({ bus });
+new LearningPanel(document, bus);
+
+const controller = new GameController({ bus, game, board, ui, modals, stats, timer, learning });
+new Input(document, board, controller, learning);
 
 // Draw the starting position straight away (locked under the welcome card),
 // then make sure the card does not hide any of the disks.

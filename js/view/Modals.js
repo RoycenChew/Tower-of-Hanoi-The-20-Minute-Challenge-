@@ -73,7 +73,7 @@ export class Modals {
 
   /**
    * @param {object} info  { diskCount, moves, minimum, stars, efficiency,
-   *   perfect, score, timeMs, hints, nextLevel, optimal }
+   *   perfect, score, timeMs, hints, nextLevel }
    */
   showVictory(info) {
     const byId = (id) => this.#doc.getElementById(id);
@@ -98,15 +98,6 @@ export class Modals {
     next.textContent = `Next Level: ${info.nextLevel} Disks`;
     byId('victory-all-cleared').hidden = info.nextLevel !== null;
     again.classList.toggle('btn--primary', info.nextLevel === null);
-
-    // "See Optimal Solution" (a <details>): the 2ⁿ − 1 moves of solve(n).
-    byId('victory-optimal-count').textContent = `${info.minimum} moves`;
-    byId('victory-optimal').replaceChildren(...info.optimal.map((text) => {
-      const li = this.#doc.createElement('li');
-      li.textContent = `Move ${text}`;
-      return li;
-    }));
-    byId('victory-optimal-details').open = false;
 
     this.#el.victory.showModal();
     (info.nextLevel === null ? again : next).focus();
