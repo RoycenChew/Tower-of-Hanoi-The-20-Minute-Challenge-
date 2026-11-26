@@ -4,9 +4,14 @@ import assert from 'node:assert/strict';
 import { EventBus } from '../js/model/EventBus.js';
 import { GameState } from '../js/model/GameState.js';
 import { solve } from '../js/model/Solver.js';
+import { Stats } from '../js/model/Stats.js';
+import { ChallengeTimer } from '../js/model/ChallengeTimer.js';
 import { GameController } from '../js/controller/GameController.js';
 
-/** Build a controller with fake Board and UIOverlay that just record calls. */
+/**
+ * Build a STARTED controller with fake views that just record calls.
+ * (The welcome / start flow itself is tested in challenge.test.js.)
+ */
 function setup(options = {}) {
   const bus = new EventBus();
   const game = new GameState(bus, 3);
@@ -15,6 +20,8 @@ function setup(options = {}) {
     render: (snapshot, { selectedPeg }) => calls.push(['render', selectedPeg]),
     shakePeg: (peg) => calls.push(['shakePeg', peg]),
     shakeTopDisk: (peg) => calls.push(['shakeTopDisk', peg]),
+    highlightHint: () => {},
+    finishAnimations: () => {},
   };
   const ui = {
     message: null,
@@ -22,8 +29,17 @@ function setup(options = {}) {
     render(snapshot, { lastMove }) { this.lastMove = lastMove; },
     showMessage(text, type) { this.message = { text, type }; },
     clearMessage() { this.message = { text: '', type: 'info' }; },
+    showBanner() {},
+    announce() {},
+    setTime() {},
+    setTimerLevel() {},
   };
-  const controller = new GameController({ bus, game, board, ui, ...options });
+  const modals = { hideWelcome() {}, showVictory() {}, closeAll() {}, showTimeUp() {}, showSummary() {} };
+  const timer = new ChallengeTimer(bus, { now: () => 0, setInterval: () => 1, clearInterval: () => {} });
+  const controller = new GameController({
+    bus, game, board, ui, modals, stats: new Stats(), timer, now: () => 0, ...options,
+  });
+  controller.start();
   const click = (...pegs) => pegs.forEach((peg) => controller.handlePegClick(peg));
   return { game, controller, ui, calls, click };
 }
@@ -97,13 +113,6 @@ test('when locked (time is up), every click returns TIME_UP and changes nothing'
   click(0, 2);
   assert.deepEqual(ui.message, { text: "Time's up! Moves are disabled.", type: 'error' });
   assert.equal(controller.selectedPeg, null);
-  assert.equal(game.moveCount, 0);
-});
-
-test('without the temporary flag, clicks before Start return NOT_STARTED', () => {
-  const { game, ui, click } = setup({ allowPlayWithoutStart: false });
-  click(0);
-  assert.deepEqual(ui.message, { text: 'Click "Start Challenge" to begin.', type: 'error' });
   assert.equal(game.moveCount, 0);
 });
 

@@ -40,14 +40,43 @@ node --test "tests/*.test.js"
 ## File structure
 
 ```
-index.html            the page
-css/                  base, layout, board and component styles
-js/main.js            entry point: creates objects and wires events
-js/model/             pure logic, no DOM (Stack, Rules, GameState, Solver, ChallengeTimer, Stats, EventBus)
-js/controller/        game flow, input, animations, learning mode
-js/view/              draws the board, panels, modals, debug panel, sounds
-tests/                unit tests for the model (node --test)
-docs/                 assignment brief and plan
+index.html                    the page
+css/base.css                  colour variables (with contrast ratios), fonts, reset
+css/layout.css                page regions, breakpoints, timer warning colours, red border
+css/board.css                 pegs, disks, selection, hint pulse, shake
+css/components.css            buttons, message bar, panels, welcome card, modals, debug panel
+js/main.js                    entry point: creates objects and wires events
+
+js/model/                     pure logic, no DOM (runs in Node tests)
+  Stack.js                    the LIFO stack behind every peg
+  Rules.js                    validateMove() and all player messages
+  GameState.js                pegs, move counter, undo history, move log, hints
+  Solver.js                   recursive solve(), solveWithTrace(), nextHint()
+  ChallengeTimer.js           the 20-minute countdown (no pause method)
+  Stats.js                    totals, stars, score, share text
+  EventBus.js                 on / off / emit
+
+js/controller/
+  GameController.js           screen states, input gate, challenge flow, Time's up sequence
+  Input.js                    browser events -> controller calls
+  AnimationQueue.js           move animations (Phase 4)
+  LearningMode.js             step-by-step walkthrough (Phase 5)
+
+js/view/
+  Board.js                    draws pegs and disks, hint highlight, shake
+  UIOverlay.js                timer, metrics, move log, "How it works"
+  MessageBar.js               message priority: timer warnings always get 4 s
+  Modals.js                   welcome card, victory, Time's up, final summary
+  DebugPanel.js               timer jumps, loaded only with ?debug=1
+  LearningPanel.js            learning mode panel (Phase 5)
+  Sound.js                    sound effects (Phase 6)
+
+tests/                        unit tests (npm test)
+  stack, rules, gamestate, solver, timer, stats, eventbus   model
+  controller                  click-to-select rules
+  challenge                   start, hint/undo/restart/difficulty, victory, Time's up
+  messagebar                  warning priority
+docs/                         assignment brief (kept local, not in git)
 ```
 
 ## Author

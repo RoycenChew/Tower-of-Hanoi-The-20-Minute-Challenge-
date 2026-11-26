@@ -1,7 +1,19 @@
 // stats.test.js — stars, score (hint penalty, 0 floor), efficiency and totals.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Stats, starsFor, ratePuzzle } from '../js/model/Stats.js';
+import { Stats, starsFor, ratePuzzle, shareText } from '../js/model/Stats.js';
+
+test('shareText for "Copy my result"', () => {
+  const url = 'https://example.com/';
+  const base = { score: 700 };
+  assert.equal(
+    shareText({ ...base, levelsCleared: [3, 4] }, 'Player', url),
+    'Player scored 700 in Tower of Hanoi: The 20-Minute Challenge! Cleared 3 and 4 disks. Try it: https://example.com/',
+  );
+  assert.match(shareText({ ...base, levelsCleared: [3, 4, 5] }, 'Ming', url), /Cleared 3, 4 and 5 disks\./);
+  assert.match(shareText({ ...base, levelsCleared: [3] }, 'Ming', url), /Cleared 3 disks\./);
+  assert.match(shareText({ score: 0, levelsCleared: [] }, 'Ming', url), /No levels cleared yet\./);
+});
 
 test('stars: 3 = optimal, 2 = up to 1.5 × minimum, 1 = more', () => {
   assert.equal(starsFor(7, 7), 3);

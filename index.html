@@ -26,7 +26,7 @@
 
       <div class="timer" id="timer" role="timer" aria-label="Time remaining">20:00</div>
 
-      <!-- Difficulty switching arrives in Phase 3. -->
+      <!-- Enabled after "Start Challenge". Changing difficulty never stops the clock. -->
       <div class="difficulty" role="group" aria-label="Difficulty">
         <button class="btn" type="button" data-disks="3" aria-pressed="true" disabled>3 Disks</button>
         <button class="btn" type="button" data-disks="4" aria-pressed="false" disabled>4 Disks</button>
@@ -38,6 +38,31 @@
 
       <!-- ===== Left column: the game ===== -->
       <section class="game" aria-label="Game">
+
+        <!-- Welcome card: an overlay ON TOP of the visible, locked board.
+             The board underneath already shows 3 disks on Peg A. -->
+        <div class="welcome" id="welcome">
+          <form class="welcome__card" id="welcome-form" aria-labelledby="welcome-title">
+            <h2 class="welcome__title" id="welcome-title">Ready for the 20-minute challenge?</h2>
+            <details class="welcome__rules" id="welcome-rules">
+              <summary>How to play</summary>
+              <ul>
+                <li>Move all the disks from Peg A to Peg C.</li>
+                <li>Move one disk at a time. Only the top disk can move.</li>
+                <li>A bigger disk can never go on a smaller disk.</li>
+                <li>Solve as many puzzles as you can in 20 minutes.</li>
+              </ul>
+            </details>
+            <div class="welcome__side">
+              <div class="welcome__row">
+                <label class="welcome__label" for="nickname">Nickname (optional)</label>
+                <input class="welcome__input" id="nickname" name="nickname" type="text"
+                       maxlength="20" placeholder="Player" autocomplete="nickname">
+              </div>
+              <button class="btn btn--primary btn--big" id="btn-start" type="submit">Start Challenge</button>
+            </div>
+          </form>
+        </div>
 
         <dl class="metrics">
           <div class="metric">
@@ -79,7 +104,7 @@
           </button>
         </div>
 
-        <!-- These controls are switched on in Phase 3 and Phase 5. -->
+        <!-- Enabled after "Start Challenge". Learning Mode arrives in Phase 5. -->
         <div class="controls">
           <button class="btn" type="button" id="btn-hint" disabled>Hint</button>
           <button class="btn" type="button" id="btn-undo" disabled>Undo</button>
@@ -121,6 +146,68 @@ C: []</pre>
       </aside>
     </main>
   </div>
+
+  <!-- ===== Layers above the page (none of these take up layout space) ===== -->
+
+  <!-- Red border in the final minute: fixed position + inset shadow, so nothing moves. -->
+  <div class="page-border" aria-hidden="true"></div>
+
+  <!-- Timer warnings for screen readers, read out at once. -->
+  <div class="visually-hidden" id="sr-alert" aria-live="assertive"></div>
+
+  <!-- Victory -->
+  <dialog class="modal" id="victory" aria-labelledby="victory-title">
+    <button class="modal__close" id="btn-victory-close" type="button" aria-label="Close">✕</button>
+    <h2 class="modal__title" id="victory-title">Puzzle Solved!</h2>
+    <p class="stars" id="victory-stars" role="img" aria-label="3 out of 3 stars">★★★</p>
+    <p id="victory-moves">You used 7 moves. The minimum is 7 (2³ − 1).</p>
+    <p class="modal__strong" id="victory-efficiency">Perfect! Optimal solution.</p>
+    <dl class="facts">
+      <div><dt>Time</dt><dd id="victory-time">00:00</dd></div>
+      <div><dt>Hints</dt><dd id="victory-hints">0</dd></div>
+      <div><dt>Points</dt><dd id="victory-score">+0</dd></div>
+    </dl>
+    <p class="modal__strong modal__celebrate" id="victory-all-cleared" hidden>You cleared every level!</p>
+    <div class="modal__actions">
+      <button class="btn btn--primary" id="btn-next-level" type="button">Next Level: 4 Disks</button>
+      <button class="btn" id="btn-play-again" type="button">Play Again</button>
+    </div>
+    <details class="optimal" id="victory-optimal-details">
+      <summary class="btn">See Optimal Solution (<span id="victory-optimal-count">7 moves</span>)</summary>
+      <ol class="optimal__list" id="victory-optimal"></ol>
+    </details>
+  </dialog>
+
+  <!-- Time's up! (full screen) -->
+  <div class="timeup" id="timeup" role="alert" hidden>
+    <p class="timeup__text">Time's up!</p>
+  </div>
+
+  <!-- Final Summary -->
+  <dialog class="modal" id="summary" aria-labelledby="summary-title">
+    <h2 class="modal__title" id="summary-title">Final Summary</h2>
+    <p id="summary-player">Well played!</p>
+    <p class="summary__score">Total score: <strong id="summary-score">0</strong></p>
+    <dl class="facts facts--wide">
+      <div><dt>Puzzles completed</dt><dd id="summary-puzzles">0</dd></div>
+      <div><dt>Levels cleared</dt><dd id="summary-levels">3 ✗  4 ✗  5 ✗</dd></div>
+      <div><dt>Total moves</dt><dd id="summary-moves">0</dd></div>
+      <div><dt>Total hints</dt><dd id="summary-hints">0</dd></div>
+      <div><dt>Undos</dt><dd id="summary-undos">0</dd></div>
+      <div><dt>Invalid attempts</dt><dd id="summary-invalid">0</dd></div>
+    </dl>
+    <table class="best">
+      <caption>Best result per level</caption>
+      <thead><tr><th scope="col">Level</th><th scope="col">Fewest moves</th><th scope="col">Fastest time</th></tr></thead>
+      <tbody id="summary-best"></tbody>
+    </table>
+    <div class="modal__actions">
+      <button class="btn" id="btn-copy" type="button">Copy my result</button>
+      <button class="btn btn--primary" id="btn-new-challenge" type="button">New Challenge</button>
+    </div>
+    <p class="copy-status" id="copy-status" role="status"></p>
+    <textarea class="copy-fallback" id="copy-fallback" rows="3" readonly hidden aria-label="Your result"></textarea>
+  </dialog>
 
   <noscript>This game needs JavaScript. Please turn it on and reload the page.</noscript>
 

@@ -32,6 +32,13 @@ The full spec lives in `docs/` (plan + assignment PDF:
 9. Move log format exactly: `Move 1: Disk 1 from Peg A to Peg C`.
 10. Peg labels exactly: `Peg A — Source`, `Peg B — Spare`, `Peg C — Target`.
 
+## File structure
+- `js/model/`: Stack, Rules, GameState, Solver, ChallengeTimer, Stats, EventBus (no DOM).
+- `js/controller/`: GameController (screen states, single input gate `#inputAllowed()`, Time's up sequence), Input (all browser events), AnimationQueue (Phase 4), LearningMode (Phase 5).
+- `js/view/`: Board, UIOverlay, MessageBar (warning priority), Modals (welcome, victory, Time's up, summary), DebugPanel (?debug=1 only, dynamic import), LearningPanel (Phase 5), Sound (Phase 6).
+- `tests/`: stack, rules, gamestate, solver, timer, stats, eventbus, controller, challenge, messagebar.
+- Report test IDs used in test names: TC-01 empty source, TC-02 larger on smaller, TC-04 undo after 5 moves, TC-14 Hint, TC-16 difficulty change, TC-18 Restart.
+
 ## Conventions
 - Pegs indexed 0, 1, 2 = A, B, C. Disks are integers: 1 = smallest, n = largest.
 - Layers: `js/model/` (pure logic) → `js/controller/` (input, flow, animation) → `js/view/` (DOM rendering).
@@ -41,6 +48,8 @@ The full spec lives in `docs/` (plan + assignment PDF:
 - Stats are updated only by explicit controller calls (`recordMove()`, `recordHint()`, ...). Learning-mode demo moves must NEVER call any Stats method (Phase 5).
 - Where each disk is: `GameState.pegOf(disk)` (an O(1) table kept next to the stacks), never `toArray()` in game logic.
 - No stray `console.log` in finished code.
+- No layout shift: messages use the fixed-height message bar; warnings change colours only; overlays/borders are fixed layers. Verify with headless Chrome rect comparisons.
+- The welcome card must never cover Peg A's disks (`Modals.fitWelcome()` collapses the rules if needed).
 
 ## Git
 - Individual assignment: NEVER add Claude as co-author or contributor (no `Co-Authored-By` lines, no AI attribution in commits or PRs).

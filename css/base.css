@@ -96,6 +96,11 @@ code, pre {
   outline-offset: 3px;
 }
 
+/* `hidden` must always win, even over display: grid / flex. */
+[hidden] {
+  display: none !important;
+}
+
 /* Hidden on screen but still read by screen readers. */
 .visually-hidden {
   position: absolute !important;

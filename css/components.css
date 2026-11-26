@@ -191,3 +191,291 @@
   font-weight: 700;
   color: var(--muted);
 }
+
+.btn--big {
+  min-height: 56px;
+  font-size: 1.1em;
+}
+
+/* ---------- Welcome overlay ---------- */
+
+/* Covers the game column with a light veil: the board (3 disks on Peg A)
+   stays visible underneath. The card sits at the TOP, so the disks at the
+   bottom of the board are never hidden. */
+.welcome {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 6px;
+  background: rgba(247, 248, 250, 0.35); /* light veil: the disks stay clearly visible */
+  border-radius: var(--radius);
+}
+
+.welcome__card {
+  display: grid;
+  gap: 0.6em;
+  width: 100%;
+  max-width: 34em;
+  padding: 0.9em 1em;
+  background: var(--surface);
+  border: 2px solid var(--text);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(20, 33, 61, 0.18);
+}
+
+.welcome__title {
+  font-size: 1.1em;
+  line-height: 1.25;
+}
+
+.welcome__rules > summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.welcome__rules ul {
+  display: grid;
+  gap: 0.2em;
+  margin-top: 0.4em;
+  padding-left: 1.2em;
+  list-style: disc;
+}
+
+.welcome__side,
+.welcome__row {
+  display: grid;
+  gap: 0.4em;
+}
+
+/* Wider screens: rules on the left, nickname + Start on the right.
+   Two columns keep the card short, so it stays above the disks. */
+@media (min-width: 600px) {
+  .welcome__card {
+    max-width: none;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+    gap: 0.6em 1.2em;
+  }
+
+  .welcome__title {
+    grid-column: 1 / -1;
+  }
+}
+
+.welcome__label {
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.welcome__input {
+  min-height: 48px;
+  padding: 0.3em 0.6em;
+  font: inherit;
+  color: var(--text);
+  border: 2px solid var(--peg);
+  border-radius: 10px;
+}
+
+/* ---------- Modals (<dialog>) ---------- */
+
+.modal {
+  width: min(92vw, 34em);
+  max-height: 92vh;
+  padding: 1.2em 1.2em 1em;
+  color: var(--text);
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(20, 33, 61, 0.35);
+}
+
+.modal::backdrop {
+  background: rgba(20, 33, 61, 0.55);
+}
+
+.modal > * + * {
+  margin-top: 0.6em;
+}
+
+.modal__title {
+  font-size: 1.5em;
+  line-height: 1.2;
+  padding-right: 2em; /* room for the ✕ button */
+}
+
+.modal__close {
+  position: absolute;
+  top: 0.5em;
+  right: 0.5em;
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 1.2em;
+  background: none;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.modal__strong {
+  font-weight: 700;
+}
+
+.modal__celebrate {
+  color: var(--success);
+}
+
+.modal__actions {
+  display: grid;
+  gap: 8px;
+}
+
+@media (min-width: 600px) {
+  .modal__actions {
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
+}
+
+.stars {
+  font-size: 2.2em;
+  line-height: 1;
+  color: #B7791F; /* gold-brown, 3.6:1 on white: passes the 3:1 rule for large text */
+  letter-spacing: 0.1em;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.facts--wide {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.facts > div {
+  padding: 0.4em 0.6em;
+  background: var(--bg);
+  border-radius: 8px;
+}
+
+.facts dt {
+  font-size: 0.8em;
+  color: var(--muted);
+}
+
+.facts dd {
+  font-size: 1.2em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+}
+
+.summary__score {
+  font-size: 1.3em;
+}
+
+.optimal > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  list-style: none;
+}
+
+.optimal > summary::-webkit-details-marker {
+  display: none;
+}
+
+.optimal__list {
+  max-height: 12em;
+  margin-top: 0.5em;
+  padding: 0.4em 0.6em;
+  overflow-y: auto;
+  font-variant-numeric: tabular-nums;
+  background: var(--bg);
+  border-radius: 8px;
+}
+
+.best {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.best caption {
+  font-weight: 700;
+  text-align: left;
+  padding-bottom: 0.3em;
+}
+
+.best th,
+.best td {
+  padding: 0.3em 0.4em;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.best th {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+.copy-status {
+  min-height: 1.4em;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.copy-fallback {
+  width: 100%;
+  font: inherit;
+}
+
+/* ---------- Time's up! ---------- */
+
+.timeup {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(20, 33, 61, 0.9);
+}
+
+.timeup__text {
+  font-size: clamp(56px, 13vw, 260px);
+  font-weight: 900;
+  line-height: 1;
+  color: #FFFFFF;
+  text-align: center;
+}
+
+/* ---------- Debug panel (?debug=1 only) ---------- */
+
+.debug-panel {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  z-index: 30;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  font-size: 14px;
+  background: #FFF7D6;
+  border: 2px dashed var(--warning);
+  border-radius: 10px;
+}
+
+.debug-panel__title {
+  font-weight: 700;
+}
+
+.debug-panel .btn {
+  min-height: 40px;
+  font-size: 14px;
+}

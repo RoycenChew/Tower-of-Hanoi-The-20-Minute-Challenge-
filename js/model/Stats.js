@@ -35,6 +35,23 @@ export function ratePuzzle(diskCount, moves, hints) {
   return { minimum, stars, score, efficiency, perfect: moves === minimum };
 }
 
+/** "3", "3 and 4", "3, 4 and 5" */
+function joinLevels(levels) {
+  if (levels.length <= 1) return levels.join('');
+  return `${levels.slice(0, -1).join(', ')} and ${levels.at(-1)}`;
+}
+
+/**
+ * The text for "Copy my result", e.g.
+ * "Player scored 700 in Tower of Hanoi: The 20-Minute Challenge! Cleared 3 and 4 disks. Try it: <url>"
+ */
+export function shareText(summary, nickname, url) {
+  const cleared = summary.levelsCleared.length
+    ? `Cleared ${joinLevels(summary.levelsCleared)} disks.`
+    : 'No levels cleared yet.';
+  return `${nickname} scored ${summary.score} in Tower of Hanoi: The 20-Minute Challenge! ${cleared} Try it: ${url}`;
+}
+
 export class Stats {
   puzzlesCompleted = 0;
   levelsCleared = new Set(); // which of 3 / 4 / 5 disks were solved at least once

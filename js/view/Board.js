@@ -7,9 +7,11 @@
 import { PEG_NAMES, PEG_LETTERS } from '../model/Rules.js';
 
 const SHAKE_MS = 300;
+const HINT_MS = 3000;
 
 export class Board {
   #root;
+  #hintTimer = null;
 
   /** @param {HTMLElement} root  the .board element containing three .peg buttons */
   constructor(root) {
@@ -39,6 +41,37 @@ export class Board {
       button.setAttribute('aria-pressed', String(isSelected));
       button.setAttribute('aria-label', describePeg(peg, disks, isSelected));
     });
+  }
+
+  /**
+   * Hint: the suggested disk and the target peg pulse blue for 3 seconds.
+   * Nothing moves; this is only a highlight.
+   */
+  highlightHint({ from, to }) {
+    clearTimeout(this.#hintTimer);
+    this.#clearHint();
+    this.pegButtons[from].querySelector('.disks').lastElementChild?.classList.add('is-hint');
+    this.pegButtons[to].querySelector('.peg-area').classList.add('is-hint-target');
+    this.#hintTimer = setTimeout(() => this.#clearHint(), HINT_MS);
+  }
+
+  /**
+   * Jump every running board animation to its end, so the screen shows the
+   * real state at once (used when time runs out).
+   */
+  finishAnimations() {
+    for (const animation of this.#root.getAnimations({ subtree: true })) {
+      try {
+        animation.finish();
+      } catch {
+        animation.cancel(); // an endless animation cannot "finish"; just stop it
+      }
+    }
+  }
+
+  #clearHint() {
+    this.#root.querySelectorAll('.is-hint, .is-hint-target')
+      .forEach((el) => el.classList.remove('is-hint', 'is-hint-target'));
   }
 
   /** Shake a whole peg (e.g. clicking an empty peg as the source). */

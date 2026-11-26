@@ -120,6 +120,24 @@
   outline-offset: -3px;
 }
 
+/* ---------- Hint: disk and target peg pulse blue (3 × 1 s) ---------- */
+
+@keyframes hint-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--hint); }
+  50% { box-shadow: 0 0 0 3px var(--hint), 0 0 18px 8px rgba(23, 92, 211, 0.55); }
+}
+
+.disk.is-hint {
+  animation: hint-pulse 1s ease-in-out 3;
+  box-shadow: 0 0 0 3px var(--hint);
+}
+
+.peg-area.is-hint-target {
+  outline: 3px solid var(--hint);
+  outline-offset: -3px;
+  background: var(--hint-bg);
+}
+
 /* ---------- Error shake (300 ms) ---------- */
 
 /* Uses `translate` (not `transform`) so it can run on a lifted disk too. */
@@ -143,6 +161,10 @@
   .disk,
   .peg-area {
     transition: none;
+  }
+
+  .disk.is-hint {
+    animation: none;
   }
 
   .is-shaking {
