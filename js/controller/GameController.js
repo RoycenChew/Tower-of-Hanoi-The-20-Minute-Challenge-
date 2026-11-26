@@ -17,9 +17,10 @@ import { MESSAGES, describeMove, validateMove } from '../model/Rules.js';
 import { updateLevelBest, updateBestScore, normalizeBests } from '../model/Stats.js';
 import { AnimationQueue } from './AnimationQueue.js';
 
-/** Screen states (section 5.1). */
+/** Screen states (section 5.1), plus PRACTICE: an untimed, uncounted warm-up before Start. */
 export const Screen = Object.freeze({
   WELCOME: 'WELCOME',
+  PRACTICE: 'PRACTICE',
   PLAYING: 'PLAYING',
   LEARNING: 'LEARNING',
   VICTORY: 'VICTORY',
@@ -30,6 +31,18 @@ export const DIFFICULTIES = [3, 4, 5];
 export const SUMMARY_DELAY_MS = 1500;  // "Time's up!" shows alone this long, then the summary
 export const RESTART_KEY_WINDOW_MS = 2000; // R must be pressed twice within this time
 export const PRESS_R_AGAIN = 'Press R again to restart.';
+
+// Friendly nudges for beginners (shown in the message bar).
+export const IDLE_NUDGE_MS = 20_000;      // no move for 20 seconds
+export const MISTAKES_BEFORE_NUDGE = 3;   // 3 refused moves in a row
+export const NUDGE = Object.freeze({
+  STUCK: 'Stuck? Try the Hint button.',
+  FIRST_MOVE: 'Nice! Keep going: move all the disks to Peg C.',
+  PRACTICE_START: 'Practice: move all 3 disks to Peg C. This puzzle is not timed and not counted.',
+  PRACTICE_DONE: 'Great practice! You are ready. Press Start Challenge when you want the clock to start.',
+  PRACTICE_ONLY_3: 'Practice uses 3 disks. You can change the difficulty after you start the challenge.',
+  LEARNING_LATER: 'Learning Mode unlocks after you start the challenge.',
+});
 
 export class GameController {
   #game;
@@ -44,6 +57,7 @@ export class GameController {
   #prefs;
   #now;
   #setTimeout;
+  #clearTimeout;
   #stopLearning;
   #cancelDrag;
 
@@ -53,6 +67,10 @@ export class GameController {
   #busyNoticeShown = false;
   /** When R was first pressed (keyboard restart needs two presses). */
   #restartArmedAt = null;
+  /** Nudges: refused moves in a row, the "no move for 20 s" timer, first move done. */
+  #mistakesInARow = 0;
+  #idleTimer = null;
+  #firstMoveDone = false;
 
   screen = Screen.WELCOME;
   /** null, or the peg (0/1/2) whose top disk is lifted. */
@@ -86,7 +104,12 @@ export class GameController {
     stopLearning = () => learning?.lock(),
     cancelDrag = () => {},
     now = () => Date.now(),
-    setTimeout = (fn, ms) => globalThis.setTimeout(fn, ms),
+    setTimeout = (fn, ms) => {
+      const id = globalThis.setTimeout(fn, ms);
+      id?.unref?.(); // in Node tests, a waiting nudge must not keep the process alive
+      return id;
+    },
+    clearTimeout = (id) => globalThis.clearTimeout(id),
   }) {
     this.#game = game;
     this.#board = board;
@@ -102,6 +125,7 @@ export class GameController {
     this.#cancelDrag = cancelDrag;
     this.#now = now;
     this.#setTimeout = setTimeout;
+    this.#clearTimeout = clearTimeout;
 
     // The model announces changes; the controller redraws.
     bus.on('state:changed', () => this.render());
@@ -122,6 +146,16 @@ export class GameController {
     return this.#game.diskCount;
   }
 
+  /** A practice puzzle can be offered only before the challenge starts. */
+  get canPractice() {
+    return this.screen === Screen.WELCOME && !this.locked;
+  }
+
+  /** True once Start Challenge has been pressed (the clock is running or has run out). */
+  get challengeStarted() {
+    return this.screen !== Screen.WELCOME && this.screen !== Screen.PRACTICE;
+  }
+
   /** Input.js registers how to cancel a drag (needed when time runs out). */
   setCancelDrag(fn) {
     this.#cancelDrag = fn;
@@ -135,11 +169,10 @@ export class GameController {
       // The last valid move is simply the top of the undo history stack.
       lastMove: this.#game.history.peek(),
       controlsEnabled: !this.locked && this.screen !== Screen.WELCOME,
+      // Practice is always 3 disks, and Learning Mode unlocks only after Start.
+      challengeControlsEnabled: !this.locked && this.screen !== Screen.WELCOME && this.screen !== Screen.PRACTICE,
+      practice: this.screen === Screen.PRACTICE,
       puzzlesSolved: this.#stats.puzzlesCompleted,
-      // Best ever for this level (null = none yet); undefined when nothing can be saved.
-      personalRecord: this.#prefs?.available
-        ? (normalizeBests(this.#prefs.get('bests')).levels[snapshot.diskCount] ?? null)
-        : undefined,
     });
   }
 
@@ -156,7 +189,41 @@ export class GameController {
     this.#timer.start();
     this.#modals.hideWelcome();
     this.#ui.clearMessage();
+    this.#firstMoveDone = false;
+    this.#mistakesInARow = 0;
     this.render();
+    this.#armIdleNudge();
+  }
+
+  // ===================== Practice (before Start) =====================
+
+  /**
+   * A 3-disk warm-up on the real board, BEFORE the challenge: the clock does
+   * not start and nothing is counted (no Stats, no score, no personal bests).
+   */
+  startPractice() {
+    if (!this.canPractice) return;
+    this.screen = Screen.PRACTICE;
+    this.selectedPeg = null;
+    this.#firstMoveDone = false;
+    this.#mistakesInARow = 0;
+    this.#game.reset(3);
+    this.#modals.hideWelcome(); // unlocks the board
+    this.render();
+    this.#ui.showMessage(NUDGE.PRACTICE_START, 'info');
+    this.#armIdleNudge();
+  }
+
+  /** "Skip practice", or the practice puzzle was solved: back to the welcome card. */
+  endPractice({ solved = false } = {}) {
+    if (this.screen !== Screen.PRACTICE) return;
+    this.#cancelIdleNudge();
+    this.screen = Screen.WELCOME;
+    this.selectedPeg = null;
+    this.#game.reset(3); // the challenge starts from a fresh board
+    this.render();
+    this.#modals.showWelcome(solved ? NUDGE.PRACTICE_DONE : null);
+    this.#ui.clearMessage();
   }
 
   /**
@@ -168,6 +235,7 @@ export class GameController {
     // 1. Lock: every input now returns TIME_UP.
     this.locked = true;
     this.screen = Screen.TIME_UP;
+    this.#cancelIdleNudge();
     // 2. Stop Learning Mode autoplay.
     this.#stopLearning();
     // 3. Empty the animation queue and finish running animations, so the
@@ -235,7 +303,7 @@ export class GameController {
     }
     // LIFO: only the disk that peek() returns can be taken off a peg.
     if (this.#game.pegs[peg].peek() !== disk) {
-      this.#ui.showMessage(MESSAGES.TOP_ONLY, 'error');
+      this.#ui.showMessage(this.#mistake(MESSAGES.TOP_ONLY), 'error');
       this.#sound.play('invalid');
       return false;
     }
@@ -284,7 +352,8 @@ export class GameController {
       this.#ui.showMessage(MESSAGES.PUZZLE_SOLVED, 'info');
       return;
     }
-    this.#stats.recordHint();
+    if (this.#counting) this.#stats.recordHint();
+    this.#mistakesInARow = 0;
     this.render();
     this.#board.highlightHint(move);
     this.#ui.showMessage(`Hint: Move ${describeMove(move)}`, 'hint');
@@ -304,7 +373,7 @@ export class GameController {
     const fromRect = last ? this.#board.measureTopDisk(last.to) : null;
     const result = this.#game.undo(); // "Nothing to undo." arrives as move:invalid
     if (result.ok) {
-      this.#stats.recordUndo();
+      if (this.#counting) this.#stats.recordUndo();
       this.#sound.play('move');
       this.#ui.clearMessage();
       this.#animate(() => this.#board.animateMove(result.move.disk, fromRect));
@@ -336,13 +405,17 @@ export class GameController {
   /** Switch to 3, 4 or 5 disks. The challenge clock keeps running. */
   setDifficulty(diskCount) {
     if (!this.#inputAllowed()) return;
+    if (this.screen === Screen.PRACTICE) {
+      this.#ui.showMessage(NUDGE.PRACTICE_ONLY_3, 'info');
+      return;
+    }
     if (!DIFFICULTIES.includes(diskCount)) return;
     this.#newPuzzle(diskCount);
   }
 
   /** Victory modal: "Next Level: N Disks". */
   nextLevel() {
-    if (!this.#inputAllowed()) return;
+    if (!this.#inputAllowed() || this.screen === Screen.PRACTICE) return;
     this.#newPuzzle(Math.min(this.#game.diskCount + 1, 5));
   }
 
@@ -366,6 +439,11 @@ export class GameController {
    */
   openLearning(diskCount = 3) {
     if (!this.#learning || !this.#inputAllowed()) return;
+    if (this.screen === Screen.PRACTICE) {
+      this.#ui.showMessage(NUDGE.LEARNING_LATER, 'info');
+      return;
+    }
+    this.#cancelIdleNudge();
     this.selectedPeg = null;
     this.screen = Screen.LEARNING;
     this.#modals.closeAll(); // e.g. the victory modal, when opened from "See Optimal Solution"
@@ -380,6 +458,7 @@ export class GameController {
     this.screen = Screen.PLAYING;
     this.render();
     this.#ui.clearMessage();
+    this.#armIdleNudge();
   }
 
   // ===================== private =====================
@@ -437,11 +516,12 @@ export class GameController {
     const stack = this.#game.pegs[peg];
     if (stack.isEmpty()) {
       // Rejected selection, not a move attempt: message + shake, not logged or counted.
-      this.#ui.showMessage(MESSAGES.EMPTY_SOURCE, 'error');
+      this.#ui.showMessage(this.#mistake(MESSAGES.EMPTY_SOURCE), 'error');
       this.#board.shakePeg(peg);
       this.#sound.play('invalid');
       return;
     }
+    this.#armIdleNudge(); // picking up a disk counts as doing something
     this.selectedPeg = peg;
     this.render();
     this.#ui.showMessage(
@@ -470,18 +550,32 @@ export class GameController {
     const result = this.#game.tryMove(from, to);
 
     if (!result.ok) {
-      this.#stats.recordInvalid();
+      if (this.#counting) this.#stats.recordInvalid();
+      // The model already showed why the move was refused; after several
+      // mistakes in a row, add a gentle pointer to the Hint button.
+      if (this.#mistakesInARow + 1 >= MISTAKES_BEFORE_NUDGE) {
+        this.#ui.showMessage(this.#mistake(result.message), 'error');
+      } else {
+        this.#mistake(result.message);
+      }
       this.#sound.play('invalid');
       if (dropped) this.#animate(() => this.#board.animateReturn(from, fromRect));
       else this.#board.shakeTopDisk(from); // the disk "drops back" with a shake
       return;
     }
 
-    this.#stats.recordMove();
+    if (this.#counting) this.#stats.recordMove();
+    this.#mistakesInARow = 0;
     this.#sound.play('move');
     this.#ui.pulseMoves();
+
+    if (this.screen === Screen.PRACTICE) {
+      this.#afterPracticeMove(result, fromRect);
+      return;
+    }
+
     const victory = result.solved ? this.#recordSolved() : null;
-    if (!victory) this.#ui.clearMessage();
+    if (!victory) this.#encourage();
 
     // 2. The picture catches up: animate from the old place to the new one.
     //    The victory modal waits until the disk has landed.
@@ -494,6 +588,74 @@ export class GameController {
         }
       },
     );
+  }
+
+  /** Practice: animate as usual; when solved, go back to the welcome card. Nothing is counted. */
+  #afterPracticeMove(result, fromRect) {
+    if (result.solved) {
+      this.#cancelIdleNudge();
+      this.#ui.showMessage('Solved! Well done.', 'success');
+    } else {
+      this.#encourage();
+    }
+    this.#animate(
+      () => this.#board.animateMove(result.move.disk, fromRect),
+      () => {
+        if (result.solved && this.screen === Screen.PRACTICE) {
+          this.#sound.play('win');
+          this.endPractice({ solved: true });
+        }
+      },
+    );
+  }
+
+  /** After a valid move: a word of encouragement the first time, otherwise the normal prompt. */
+  #encourage() {
+    if (!this.#firstMoveDone) {
+      this.#firstMoveDone = true;
+      this.#ui.showMessage(NUDGE.FIRST_MOVE, 'success');
+    } else {
+      this.#ui.clearMessage();
+    }
+    this.#armIdleNudge();
+  }
+
+  /** Practice moves are never counted in Stats. */
+  get #counting() {
+    return this.screen !== Screen.PRACTICE;
+  }
+
+  /**
+   * One more refused move. Returns the message to show: after several in a
+   * row, it ends with "Stuck? Try the Hint button."
+   */
+  #mistake(message) {
+    this.#mistakesInARow++;
+    return this.#mistakesInARow >= MISTAKES_BEFORE_NUDGE ? `${message} ${NUDGE.STUCK}` : message;
+  }
+
+  /**
+   * (Re)start the "no move for 20 seconds" timer. When it fires it suggests
+   * the Hint button once; it starts again only after the next move.
+   */
+  #armIdleNudge() {
+    this.#cancelIdleNudge();
+    if (!this.#nudgesActive()) return;
+    this.#idleTimer = this.#setTimeout(() => {
+      this.#idleTimer = null;
+      if (this.#nudgesActive()) this.#ui.showMessage(NUDGE.STUCK, 'hint');
+    }, IDLE_NUDGE_MS);
+  }
+
+  #cancelIdleNudge() {
+    if (this.#idleTimer !== null) this.#clearTimeout(this.#idleTimer);
+    this.#idleTimer = null;
+  }
+
+  /** Nudges only while actually playing a puzzle that is not solved yet. */
+  #nudgesActive() {
+    return !this.locked && !this.#game.solved
+      && (this.screen === Screen.PLAYING || this.screen === Screen.PRACTICE);
   }
 
   /**
@@ -511,6 +673,7 @@ export class GameController {
       hints: game.hintsUsed,
     });
     this.screen = Screen.VICTORY;
+    this.#cancelIdleNudge();
     this.render(); // "Puzzles solved" metric
     this.#ui.showMessage(`Puzzle solved in ${game.moveCount} moves! The minimum is ${game.minMoves()}.`, 'success');
     return {
@@ -545,11 +708,13 @@ export class GameController {
   /** Fresh puzzle with n disks. Stats totals and the challenge clock are untouched. */
   #newPuzzle(n) {
     this.selectedPeg = null;
-    this.screen = Screen.PLAYING;
+    if (this.screen !== Screen.PRACTICE) this.screen = Screen.PLAYING;
+    this.#mistakesInARow = 0;
     this.#modals.closeAll();
     this.#game.reset(n); // emits state:changed -> render
     this.#puzzleStartedAt = this.#now();
     this.render();
     this.#ui.showMessage(`New puzzle: ${n} disks. Move them all to Peg C.`, 'info');
+    this.#armIdleNudge();
   }
 }

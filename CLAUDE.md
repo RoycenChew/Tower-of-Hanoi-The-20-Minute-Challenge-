@@ -91,6 +91,15 @@ The full spec lives in `docs/` (plan + assignment PDF:
 - Learning Mode step list: each step is a `<button data-step>`; clicking calls `learning.seek(step)` (no animation, pauses autoplay, refused after Time's up, never touches Stats).
 - `renderStackBoxes()` in UIOverlay.js draws the Stack A/B/C boxes for both the game and Learning Mode.
 
+## Phase 8 beginner rules
+- First visit: `Tour` (5 steps, spotlight) opens automatically; `prefs.tourSeen` stops it next time. The **?** button reopens it; during a challenge it shows "the clock keeps running" (never pause the timer).
+- Practice = `Screen.PRACTICE`: 3 disks, before Start only, no timer, NOTHING counted (no Stats, score or bests), Learning Mode and difficulty locked; solving or "Skip practice" returns to the welcome card with a fresh board.
+- Nudges (controller): first valid move -> encouragement; 3 refused moves in a row -> "... Stuck? Try the Hint button."; 20 s idle -> same hint message once until the next move. Cancelled in Learning Mode, after a win, and at Time's up.
+- Main screen stays calm: compact metrics row (Moves / minimum 2ⁿ − 1 / Hints / Solved), goal line, side panel as tabs (Moves default). No legend or record widget on the main screen.
+- Glossary: `<button class="term" data-term="...">` inside sentences (inline, exempt from the 48 px rule); separate "i" buttons use `.term--icon` (48 × 48 tap area).
+- Learning Mode layers: board + steps first; "Show how the computer thinks" and "Why does this work?" are closed `<details>`.
+- Welcome safety net order: hide banner -> collapse rules -> compact card. Focus returns to Start Challenge whenever the card reappears.
+
 ## Git
 - Individual assignment: NEVER add Claude as co-author or contributor (no `Co-Authored-By` lines, no AI attribution in commits or PRs).
 - Commit or push only when the user asks. The user creates the GitHub repo and connects the remote.

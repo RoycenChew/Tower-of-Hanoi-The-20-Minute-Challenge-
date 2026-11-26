@@ -48,6 +48,16 @@ Fonts (Epilogue and Manrope) and icons are stored in the project, so the game al
   **recursion call tree**, plus the sub-tower being moved.
 - Theory cards: why the minimum is 2ⁿ − 1, why every peg is a stack, and sub-towers.
 
+**Friendly for beginners**
+- A 5-step **guided tour** on the first visit (the **?** button opens it again at any time),
+  ending with an optional **practice puzzle** that is not timed and not counted.
+- A clear goal line above the board, a calm screen (the move log and "How it works" are tabs),
+  and friendly nudges: encouragement after the first move, and "Stuck? Try the Hint button."
+  after 3 mistakes in a row or 20 seconds without a move.
+- Plain words first: "How it works" starts with a sentence; computer-science words
+  (*stack*, *LIFO*, *pop/push*, *2ⁿ − 1*, *recursion*, *call stack*, *sub-tower*) explain themselves when tapped.
+- Learning Mode starts simple; "Show how the computer thinks" and "Why does this work?" open the detail.
+
 **Classroom and phone friendly**
 - Responsive from 360 px phones to 4K projectors; **Projector Mode** (+25% text, thicker lines).
 - Accessible: real buttons, screen-reader labels and live regions, visible focus, full
@@ -188,7 +198,7 @@ npm test
 node --test "tests/*.test.js"
 ```
 
-**151 unit tests** across 14 files. Test cases from the report's test table appear in the
+**158 unit tests** across 14 files. Test cases from the report's test table appear in the
 test names:
 
 | ID | What is tested | File |
@@ -242,6 +252,8 @@ js/view/
   LearningPanel.js            demo board, steps, Stack panel, call stack, call tree
   Confetti.js                 confetti when a puzzle is solved
   Sound.js                    Web Audio sound effects
+  Tour.js                     the guided tour (spotlight + steps)
+  Glossary.js                 tap-to-explain computer-science words
   DebugPanel.js               timer jumps, loaded only with ?debug=1
 
 tests/                        unit tests (npm test)

@@ -1377,3 +1377,328 @@
   background: var(--surface-low);
   border-radius: 10px;
 }
+
+/* ===================== Beginner-friendly additions ===================== */
+
+/* Very narrow phones: the difficulty buttons show only the number
+   (the word "Disks" is still read out by screen readers). */
+@media (max-width: 419px) {
+  .d-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* ----- Compact metrics row ----- */
+
+.metrics {
+  gap: 0;
+  padding: 0.45em 0.2em;
+}
+
+.metrics .metric {
+  padding: 0.15em 0.8em;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.metrics .metric + .metric {
+  border-left: 1px solid var(--line);
+}
+
+.metric__of {
+  font-family: var(--font);
+  font-size: 0.5em;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* ----- Goal line (fixed height: content changes never move the board) ----- */
+
+.goal {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  min-height: 48px;
+  height: calc(2 * 1.3em + 0.6em);
+  padding: 0 0.2em;
+  overflow: hidden;
+}
+
+.goal__icon {
+  color: var(--primary);
+}
+
+.goal__text {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-heading);
+  font-size: 1.05em;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.goal__skip {
+  flex: none;
+}
+
+/* ----- Right column: one card with two tabs ----- */
+
+.side.card {
+  display: grid;
+  gap: 0.8em;
+  align-content: start;
+  padding: 0.6em;
+}
+
+.side__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-high);
+  border-radius: 12px;
+}
+
+.side__tab {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0.3em 0.6em;
+  font-weight: 800;
+  white-space: nowrap;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.side__tab[aria-selected="true"] {
+  color: #FFFFFF;
+  background: var(--primary);
+  border-color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.side .panel {
+  display: grid;
+  gap: 0.75em;
+  padding: 0 0.4em 0.4em;
+}
+
+/* A plain-English sentence before the computer-science detail. */
+.plain {
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+/* ----- Glossary words ----- */
+
+/* A word inside a sentence that explains itself when tapped (inline, like a link). */
+.term {
+  display: inline;
+  padding: 0;
+  font: inherit;
+  font-weight: 800;
+  color: var(--primary-strong);
+  background: none;
+  border: 0;
+  border-bottom: 2px dotted var(--primary);
+  cursor: help;
+}
+
+.term[aria-expanded="true"] {
+  background: var(--primary-soft);
+}
+
+/* A separate "i" button: a 48 × 48 px tap area with a small circle inside. */
+.term--icon {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: -12px -8px;
+  vertical-align: middle;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--primary-strong);
+  border: 0;
+  background: radial-gradient(circle, var(--primary-soft) 0 13px, var(--primary) 13px 15px, transparent 15px);
+}
+
+.tip {
+  position: fixed;
+  z-index: 70;
+  max-width: min(20em, calc(100vw - 16px));
+  padding: 0.6em 0.8em;
+  font-size: 0.9em;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #FFFFFF;
+  background: var(--text);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+/* ----- Guided tour ----- */
+
+/* The spotlight: a clear hole around the part being explained; everything
+   else is dimmed by its huge shadow. It never takes clicks. */
+.spotlight {
+  position: fixed;
+  z-index: 60;
+  border-radius: 16px;
+  box-shadow: 0 0 0 4px var(--glow), 0 0 0 100vmax rgba(20, 33, 61, 0.6);
+  pointer-events: none;
+}
+
+.tour {
+  position: fixed;
+  inset: auto auto 16px 50%;
+  width: min(92vw, 30em);
+  margin: 0;
+  padding: 1em 1.1em 0.9em;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 0 6px 0 var(--ink);
+  transform: translateX(-50%);
+}
+
+.tour.tour--top {
+  inset: 16px auto auto 50%;
+}
+
+.tour::backdrop {
+  background: transparent; /* the spotlight does the dimming */
+}
+
+.tour > * + * {
+  margin-top: 0.55em;
+}
+
+.tour__count {
+  font-size: 0.78em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.tour__title {
+  font-size: 1.3em;
+  font-weight: 800;
+}
+
+.tour__text {
+  line-height: 1.5;
+}
+
+.tour__note {
+  font-weight: 700;
+  color: var(--warning);
+}
+
+.tour__actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 599px) {
+  .tour #tour-choice {
+    grid-auto-flow: row;
+  }
+}
+
+.tour__skip {
+  display: block;
+  min-height: 48px;
+  margin-left: auto;
+  padding: 0 0.6em;
+  font-weight: 700;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ----- Learning Mode layers ----- */
+
+.learning__intro {
+  margin-top: 0.3em;
+  color: var(--muted);
+}
+
+.layer {
+  padding: 0.3em 0.8em 0.8em;
+}
+
+.layer__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3em 0.6em;
+  min-height: 56px;
+  cursor: pointer;
+}
+
+.layer__summary .icon {
+  color: var(--primary);
+}
+
+.layer__title {
+  font-family: var(--font-heading);
+  font-size: 1.15em;
+  font-weight: 700;
+}
+
+.layer__hint {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+.layer[open] > .layer__summary {
+  margin-bottom: 0.6em;
+}
+
+/* Welcome card, step 3 of the safety net (small phones): tighter spacing and
+   the nickname label read only by screen readers (the box still says "Player"). */
+.welcome--compact .welcome__card {
+  gap: 0.35em;
+  padding: 0.55em 0.8em 0.6em;
+}
+
+.welcome--compact .welcome__title {
+  font-size: 1em;
+}
+
+.welcome--compact .welcome__side {
+  gap: 0.3em;
+}
+
+.welcome--compact .welcome__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.welcome--compact .welcome__note {
+  font-size: 0.8em;
+}

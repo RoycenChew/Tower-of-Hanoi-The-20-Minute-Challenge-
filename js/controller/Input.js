@@ -74,7 +74,7 @@ export class Input {
    * @param {Sound} parts.sound
    * @param {Preferences} parts.prefs
    */
-  constructor(doc, { board, controller, learning, ui, modals, sound, prefs }) {
+  constructor(doc, { board, controller, learning, ui, modals, sound, prefs, tour }) {
     this.#doc = doc;
     this.#board = board;
     this.#controller = controller;
@@ -159,6 +159,13 @@ export class Input {
     const unlockAudio = () => sound.unlock();
     doc.addEventListener('pointerdown', unlockAudio, { capture: true });
     doc.addEventListener('keydown', unlockAudio, { capture: true });
+
+    // ---- Help: the guided tour (practice is offered only before Start) ----
+    onClick('btn-help', () => tour.start({
+      offerPractice: controller.canPractice,
+      clockRunning: controller.challengeStarted && !controller.locked,
+    }));
+    onClick('btn-skip-practice', () => controller.endPractice());
 
     // ---- Top-bar tools (both choices are remembered) ----
     onClick('btn-mute', () => {

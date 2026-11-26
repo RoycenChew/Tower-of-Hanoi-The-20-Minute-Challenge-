@@ -15,6 +15,8 @@ import { UIOverlay } from './view/UIOverlay.js';
 import { Modals } from './view/Modals.js';
 import { LearningPanel } from './view/LearningPanel.js';
 import { Sound } from './view/Sound.js';
+import { Tour } from './view/Tour.js';
+import { initGlossary } from './view/Glossary.js';
 import { GameController } from './controller/GameController.js';
 import { LearningMode } from './controller/LearningMode.js';
 import { Preferences } from './controller/Preferences.js';
@@ -44,12 +46,31 @@ new LearningPanel(document, bus);
 
 // ---- Controller and input ----
 const controller = new GameController({ bus, game, board, ui, modals, stats, timer, learning, sound, prefs });
-new Input(document, { board, controller, learning, ui, modals, sound, prefs });
+
+// ---- Guided tour and glossary (for beginners) ----
+// While the tour runs before Start, the welcome card steps aside so the
+// spotlight can show the real board. Afterwards: practice, or the card again.
+const tour = new Tour(document, {
+  onOpen: () => {
+    if (controller.canPractice) modals.setWelcomeCardVisible(false);
+  },
+  onClose: (choice) => {
+    prefs.set('tourSeen', true); // first-time players see it automatically only once
+    if (choice === 'practice' && controller.canPractice) controller.startPractice();
+    else if (controller.canPractice) modals.setWelcomeCardVisible(true);
+  },
+});
+initGlossary(document);
+
+new Input(document, { board, controller, learning, ui, modals, sound, prefs, tour });
 
 // Draw the starting position straight away (locked under the welcome card),
 // then make sure the card does not hide any of the disks.
 controller.render();
 modals.fitWelcome();
+
+// First visit: start with the tour (it ends by offering a practice puzzle).
+if (!prefs.get('tourSeen', false)) tour.start({ offerPractice: true });
 
 // Browsers slow down timers in background tabs. When the player comes back,
 // tick at once so the clock (and any missed warning) is correct immediately.

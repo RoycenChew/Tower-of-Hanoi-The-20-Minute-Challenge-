@@ -65,6 +65,7 @@
     <symbol id="i-tree" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v5M6 17v-5h12v5"/></symbol>
     <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
     <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM8 7h7"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/></symbol>
     <symbol id="i-palette" viewBox="0 0 24 24"><rect x="3" y="15" width="18" height="4" rx="1.5"/><rect x="6" y="10" width="12" height="4" rx="1.5"/><rect x="9" y="5" width="6" height="4" rx="1.5"/></symbol>
   </svg>
 
@@ -87,13 +88,17 @@
 
       <!-- Enabled after "Start Challenge". Changing difficulty never stops the clock. -->
       <div class="difficulty segmented" role="group" aria-label="Difficulty">
-        <button class="btn" type="button" data-disks="3" aria-pressed="true" disabled>3 Disks</button>
-        <button class="btn" type="button" data-disks="4" aria-pressed="false" disabled>4 Disks</button>
-        <button class="btn" type="button" data-disks="5" aria-pressed="false" disabled>5 Disks</button>
+        <button class="btn" type="button" data-disks="3" aria-pressed="true" disabled>3<span class="d-word"> Disks</span></button>
+        <button class="btn" type="button" data-disks="4" aria-pressed="false" disabled>4<span class="d-word"> Disks</span></button>
+        <button class="btn" type="button" data-disks="5" aria-pressed="false" disabled>5<span class="d-word"> Disks</span></button>
       </div>
 
       <!-- Sound and Projector Mode (both remembered for next time). -->
       <div class="topbar__tools">
+        <!-- Help: reopens the guided tour at any time (the clock never pauses). -->
+        <button class="btn btn--icon" id="btn-help" type="button" aria-label="Help: how to play" title="Help: how to play">
+          <svg class="icon" aria-hidden="true"><use href="#i-help"/></svg>
+        </button>
         <button class="btn btn--icon" id="btn-mute" type="button" aria-pressed="false"
                 aria-label="Mute sound" title="Mute sound">
           <svg class="icon icon--sound-on" aria-hidden="true"><use href="#i-sound-on"/></svg>
@@ -122,7 +127,7 @@
                  width="640" height="274" loading="eager" decoding="async"
                  alt="Hanoi Tower poster: Challenge yourself!">
             <h2 class="welcome__title" id="welcome-title">Ready for the 20-minute challenge?</h2>
-            <details class="welcome__rules" id="welcome-rules">
+            <details class="welcome__rules" id="welcome-rules" open>
               <summary>How to play</summary>
               <ul>
                 <li>Move all the disks from Peg A to Peg C.</li>
@@ -141,26 +146,24 @@
                 <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>
                 <span>Start Challenge</span>
               </button>
-              <p class="welcome__note">Learning Mode unlocks after you start.</p>
+              <p class="welcome__note" id="welcome-note">New here? Press the <strong>?</strong> button for a quick tour. Learning Mode unlocks after you start.</p>
             </div>
           </form>
         </div>
 
-        <dl class="metrics">
-          <div class="metric card">
+        <!-- One compact row of numbers. The minimum 2ⁿ − 1 is always visible. -->
+        <dl class="metrics card">
+          <div class="metric metric--moves">
             <dt>Moves</dt>
-            <dd id="metric-moves">0</dd>
+            <dd><span id="metric-moves">0</span> <span class="metric__of">/ <span id="metric-minimum">7</span> minimum</span>
+              <span class="metric__formula" id="metric-minimum-formula">(2³ − 1)</span></dd>
           </div>
-          <div class="metric card">
-            <dt>Minimum</dt>
-            <dd><span id="metric-minimum">7</span> <span class="metric__formula" id="metric-minimum-formula">(2³ − 1)</span></dd>
-          </div>
-          <div class="metric card">
+          <div class="metric">
             <dt>Hints</dt>
             <dd id="metric-hints">0</dd>
           </div>
-          <div class="metric card">
-            <dt>Puzzles solved</dt>
+          <div class="metric">
+            <dt>Solved</dt>
             <dd id="metric-solved">0</dd>
           </div>
         </dl>
@@ -175,6 +178,13 @@
             <svg class="icon" data-for="warning"><use href="#i-timer"/></svg>
           </span>
           <span class="message-bar__text" id="message-text">Click a peg to pick up its top disk.</span>
+        </div>
+
+        <!-- Goal line: always the same height. During practice it also offers "Skip practice". -->
+        <div class="goal" id="goal">
+          <svg class="icon goal__icon" aria-hidden="true"><use href="#i-flag"/></svg>
+          <p class="goal__text" id="goal-text">Goal: move all 3 disks to Peg C.</p>
+          <button class="btn btn--soft goal__skip" id="btn-skip-practice" type="button" hidden>Skip practice</button>
         </div>
 
         <!-- Each peg is a button covering its whole column. Disks are drawn by js/view/Board.js. -->
@@ -210,69 +220,47 @@
           </button>
         </div>
 
-        <!-- Disk colours. Every disk also shows its number (colour is never the only clue). -->
-        <div class="legend card">
-          <p class="card__overline"><svg class="icon" aria-hidden="true"><use href="#i-palette"/></svg>Disk colours</p>
-          <ul class="legend__list" id="legend">
-            <li data-legend="1"><span class="legend__swatch" style="--c: var(--disk-1)"></span>Disk 1 (smallest)</li>
-            <li data-legend="2"><span class="legend__swatch" style="--c: var(--disk-2)"></span>Disk 2</li>
-            <li data-legend="3"><span class="legend__swatch" style="--c: var(--disk-3)"></span>Disk 3</li>
-            <li data-legend="4"><span class="legend__swatch" style="--c: var(--disk-4)"></span>Disk 4</li>
-            <li data-legend="5"><span class="legend__swatch" style="--c: var(--disk-5)"></span>Disk 5</li>
-          </ul>
-        </div>
       </section>
 
-      <!-- ===== Right column: personal record, stack panel, move history ===== -->
-      <aside class="side" aria-label="Personal record, stack operations and move history">
-
-        <!-- Shown only when the browser can save personal bests. -->
-        <div class="record card extra" id="record" hidden>
-          <span class="record__badge" aria-hidden="true"><svg class="icon"><use href="#i-trophy"/></svg></span>
-          <div class="record__text">
-            <p class="card__overline">Personal record</p>
-            <p class="record__level" id="record-level">3 disks</p>
-          </div>
-          <div class="record__value">
-            <p class="record__moves" id="record-moves">No record yet</p>
-            <p class="record__time" id="record-time"></p>
-          </div>
+      <!-- ===== Right column: two tabs. "Moves" (the log) is open by default. ===== -->
+      <aside class="side card" aria-label="Move history and explanation">
+        <div class="side__tabs" role="tablist" aria-label="Side panel">
+          <button class="side__tab" type="button" role="tab" id="tab-history" aria-controls="panel-history" aria-selected="true">
+            <svg class="icon" aria-hidden="true"><use href="#i-history"/></svg>
+            <span>Moves (<span id="log-count">0</span>)</span>
+          </button>
+          <button class="side__tab" type="button" role="tab" id="tab-how" aria-controls="panel-how" aria-selected="false">
+            <svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>
+            <span>How it works</span>
+          </button>
         </div>
 
-        <details class="panel card" id="panel-how">
-          <summary>
-            <svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>
-            <span class="panel__title">How it works</span>
-            <span class="chip">LIFO stacks</span>
-          </summary>
-          <div class="panel__body">
-            <p class="panel__note">
-              Every peg is a <strong>stack</strong>: you can only touch its top disk
-              (Last In, First Out). Moving a disk is two stack operations:
-              <code>pop()</code> from one peg, then <code>push()</code> onto another.
-            </p>
+        <section class="panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history">
+          <ol class="log" id="log"></ol>
+        </section>
 
-            <div class="lastop">
-              <p class="panel__label">Last move</p>
-              <pre class="code-box" id="how-last">Make a move to see the stack operations.</pre>
-            </div>
+        <section class="panel" id="panel-how" role="tabpanel" aria-labelledby="tab-how" hidden>
+          <p class="plain" id="how-plain">Make a move: this panel explains what the computer does with it.</p>
 
-            <p class="panel__label">Stacks now (bottom → top)</p>
-            <div class="stackboxes" id="how-stacks"></div>
-
-            <p class="formula" id="how-minimum">Minimum for 3 disks: 2³ − 1 = 7 moves.</p>
+          <div class="lastop">
+            <p class="panel__label">In code</p>
+            <pre class="code-box" id="how-last">Make a move to see the stack operations.</pre>
           </div>
-        </details>
 
-        <details class="panel card" id="panel-history">
-          <summary>
-            <svg class="icon" aria-hidden="true"><use href="#i-history"/></svg>
-            <span class="panel__title">Move History (<span id="log-count">0</span>)</span>
-          </summary>
-          <div class="panel__body">
-            <ol class="log" id="log"></ol>
-          </div>
-        </details>
+          <p class="panel__note">
+            Every peg is a <button class="term" type="button" data-term="stack">stack</button>:
+            you can only touch its top disk
+            (<button class="term" type="button" data-term="lifo">Last In, First Out</button>).
+            Moving a disk is <button class="term" type="button" data-term="pop">pop()</button> from one peg,
+            then <button class="term" type="button" data-term="push">push()</button> onto another.
+          </p>
+
+          <p class="panel__label">Stacks now (bottom → top)</p>
+          <div class="stackboxes" id="how-stacks"></div>
+
+          <p class="formula"><span id="how-minimum">Minimum for 3 disks: 2³ − 1 = 7 moves.</span>
+            <button class="term term--icon" type="button" data-term="minimum" aria-label="What does 2ⁿ − 1 mean?">i</button></p>
+        </section>
       </aside>
     </main>
 
@@ -292,11 +280,12 @@
         <div>
           <p class="card__overline"><svg class="icon" aria-hidden="true"><use href="#i-tree"/></svg>Recursion and stacks, step by step</p>
           <h2 class="learning__title" id="learning-title">Learning Mode</h2>
+          <p class="learning__intro">Watch the computer solve the puzzle, one move at a time. Press <strong>Next</strong>, or <strong>Autoplay</strong>.</p>
         </div>
         <div class="difficulty segmented" role="group" aria-label="Number of disks in the demo">
-          <button class="btn" type="button" data-learn-disks="3" aria-pressed="true">3 Disks</button>
-          <button class="btn" type="button" data-learn-disks="4" aria-pressed="false">4 Disks</button>
-          <button class="btn" type="button" data-learn-disks="5" aria-pressed="false">5 Disks</button>
+          <button class="btn" type="button" data-learn-disks="3" aria-pressed="true">3<span class="d-word"> Disks</span></button>
+          <button class="btn" type="button" data-learn-disks="4" aria-pressed="false">4<span class="d-word"> Disks</span></button>
+          <button class="btn" type="button" data-learn-disks="5" aria-pressed="false">5<span class="d-word"> Disks</span></button>
         </div>
       </div>
 
@@ -336,10 +325,10 @@
             <button class="btn" id="btn-learn-prev" type="button">
               <svg class="icon" aria-hidden="true"><use href="#i-prev"/></svg><span>Previous</span>
             </button>
-            <button class="btn" id="btn-learn-next" type="button">
+            <button class="btn btn--primary" id="btn-learn-next" type="button">
               <span>Next</span><svg class="icon" aria-hidden="true"><use href="#i-next"/></svg>
             </button>
-            <button class="btn btn--primary" id="btn-learn-play" type="button" aria-pressed="false">
+            <button class="btn btn--soft" id="btn-learn-play" type="button" aria-pressed="false">
               <svg class="icon icon--play" aria-hidden="true"><use href="#i-play"/></svg>
               <svg class="icon icon--pause" aria-hidden="true"><use href="#i-pause"/></svg>
               <span id="btn-learn-play-label">Autoplay</span>
@@ -364,7 +353,13 @@
         </div>
       </div>
 
-      <!-- What the computer is doing. On phones these two become tabs. -->
+      <!-- Layer 2: what the computer is doing (closed at first). On phones the two panels become tabs. -->
+      <details class="layer card" id="learn-layer-think">
+        <summary class="layer__summary">
+          <svg class="icon" aria-hidden="true"><use href="#i-tree"/></svg>
+          <span class="layer__title">Show how the computer thinks</span>
+          <span class="layer__hint">stacks and recursion</span>
+        </summary>
       <div class="learning__panels" data-tab="stack">
         <div class="tabs" role="tablist" aria-label="Explanation">
           <button class="tab" type="button" role="tab" data-tab="stack" aria-selected="true" aria-controls="panel-stack">Stack</button>
@@ -373,7 +368,10 @@
 
         <section class="learn-card learn-card--stack card" id="panel-stack" role="tabpanel" aria-labelledby="stack-title">
           <h3 class="card__title" id="stack-title"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>Stack operations</h3>
-          <p class="panel__note">A move is one <code>pop()</code> from the source peg and one <code>push()</code> onto the target peg.</p>
+          <p class="plain">Each peg is a <button class="term" type="button" data-term="stack">stack</button>:
+            a pile where you can only use the top disk.</p>
+          <p class="panel__note">A move is one <button class="term" type="button" data-term="pop">pop()</button> from the source peg
+            and one <button class="term" type="button" data-term="push">push()</button> onto the target peg.</p>
           <div class="lastop">
             <p class="panel__label">This step</p>
             <pre class="code-box" id="learn-ops"></pre>
@@ -384,7 +382,11 @@
 
         <section class="learn-card learn-card--recursion card" id="panel-recursion" role="tabpanel" aria-labelledby="recursion-title">
           <h3 class="card__title" id="recursion-title"><svg class="icon" aria-hidden="true"><use href="#i-tree"/></svg>Recursion</h3>
-          <p class="panel__label">Call stack (newest call on top)</p>
+          <p class="plain">To move a big tower, the computer first moves a smaller tower: the same puzzle with one disk fewer
+            (<button class="term" type="button" data-term="recursion">recursion</button>,
+            <button class="term" type="button" data-term="subtower">sub-tower</button>).</p>
+          <p class="panel__label">Call stack (newest call on top)
+            <button class="term term--icon" type="button" data-term="callstack" aria-label="What is the call stack?">i</button></p>
           <ol class="callstack" id="learn-callstack"></ol>
           <p class="panel__note">
             The call stack is itself a <strong>LIFO stack</strong>: the newest call
@@ -404,7 +406,15 @@
         </section>
       </div>
 
-      <!-- Theory cards (text from the specification). -->
+      </details>
+
+      <!-- Layer 3: the theory (closed at first). Text from the specification. -->
+      <details class="layer card" id="learn-layer-why">
+        <summary class="layer__summary">
+          <svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>
+          <span class="layer__title">Why does this work?</span>
+          <span class="layer__hint">minimum moves, stacks, sub-towers</span>
+        </summary>
       <div class="learning__theory">
         <article class="learn-card theory card">
           <p class="card__overline">01 · Minimum moves</p>
@@ -454,6 +464,7 @@
           </p>
         </article>
       </div>
+      </details>
     </section>
   </div>
 
@@ -461,6 +472,24 @@
 
   <!-- Red border in the final minute: fixed position + inset shadow, so nothing moves. -->
   <div class="page-border" aria-hidden="true"></div>
+
+  <!-- Guided tour: a spotlight around the part being explained, and a small card. -->
+  <div class="spotlight" id="tour-spotlight" aria-hidden="true" hidden></div>
+  <dialog class="tour" id="tour" aria-labelledby="tour-title" aria-describedby="tour-text">
+    <p class="tour__count" id="tour-count">Step 1 of 5</p>
+    <h2 class="tour__title" id="tour-title">The goal</h2>
+    <p class="tour__text" id="tour-text"></p>
+    <p class="tour__note" id="tour-note" hidden>The challenge clock keeps running while you read this.</p>
+    <div class="tour__actions" id="tour-steps">
+      <button class="btn" id="btn-tour-back" type="button">Back</button>
+      <button class="btn btn--primary" id="btn-tour-next" type="button">Next</button>
+    </div>
+    <div class="tour__actions" id="tour-choice" hidden>
+      <button class="btn btn--primary" id="btn-tour-practice" type="button">Try a practice puzzle</button>
+      <button class="btn" id="btn-tour-done" type="button">Skip, go to the challenge</button>
+    </div>
+    <button class="tour__skip" id="btn-tour-skip" type="button">Skip tour</button>
+  </dialog>
 
   <!-- Timer warnings for screen readers, read out at once. -->
   <div class="visually-hidden" id="sr-alert" aria-live="assertive"></div>

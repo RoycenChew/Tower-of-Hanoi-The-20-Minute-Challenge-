@@ -7,7 +7,9 @@ import { GameState } from '../js/model/GameState.js';
 import { Stats } from '../js/model/Stats.js';
 import { solve } from '../js/model/Solver.js';
 import { ChallengeTimer, TimerState, CHALLENGE_MS } from '../js/model/ChallengeTimer.js';
-import { GameController, Screen, SUMMARY_DELAY_MS, PRESS_R_AGAIN } from '../js/controller/GameController.js';
+import {
+  GameController, Screen, SUMMARY_DELAY_MS, PRESS_R_AGAIN, IDLE_NUDGE_MS, NUDGE,
+} from '../js/controller/GameController.js';
 import { AnimationQueue } from '../js/controller/AnimationQueue.js';
 import { LearningMode } from '../js/controller/LearningMode.js';
 import { Preferences } from '../js/controller/Preferences.js';
@@ -82,6 +84,7 @@ function setup({ realAnimations = false, prefs = null } = {}) {
     victory: null,
     summary: null,
     hideWelcome: () => log.push(['hideWelcome']),
+    showWelcome: (note) => log.push(['showWelcome', note]),
     showVictory(info) { this.victory = info; log.push(['showVictory']); },
     closeAll() { this.victory = null; log.push(['closeAll']); },
     showTimeUp: () => log.push(['showTimeUp']),
@@ -104,7 +107,8 @@ function setup({ realAnimations = false, prefs = null } = {}) {
     bus, game, board, ui, modals, stats, timer, queue, learning, prefs,
     sound: { play: (name) => sounds.push(name) },
     now: () => time,
-    setTimeout: (fn, ms) => timeouts.push({ fn, ms }),
+    setTimeout: (fn, ms) => { const t = { fn, ms, cancelled: false }; timeouts.push(t); return t; },
+    clearTimeout: (t) => { if (t) t.cancelled = true; },
     stopLearning: () => { log.push(['stopLearning']); learning.lock(); },
     cancelDrag: () => log.push(['cancelDrag']),
   });
@@ -368,10 +372,11 @@ test("Time's up: the exact sequence, input refused at once, summary after 1.5 s"
   }
   assert.deepEqual(game.snapshot(), snapshot);
 
-  // Step 7: the summary, 1.5 s later.
-  assert.equal(timeouts.length, 1);
-  assert.equal(timeouts[0].ms, SUMMARY_DELAY_MS);
-  timeouts[0].fn();
+  // Step 7: the summary, 1.5 s later. (Other timeouts are the "stuck?" nudges.)
+  const summaryTimers = timeouts.filter((t) => t.ms === SUMMARY_DELAY_MS);
+  assert.equal(summaryTimers.length, 1);
+  assert.ok(timeouts.filter((t) => t.ms === IDLE_NUDGE_MS).every((t) => t.cancelled), 'nudges cancelled at Time\'s up');
+  summaryTimers[0].fn();
   assert.equal(modals.summary.nickname, 'Ming');
   assert.equal(modals.summary.summary.totalMoves, 1);
   assert.equal(modals.summary.summary.totalHints, 1);
@@ -402,7 +407,7 @@ test("Time's up happens only once, even if the timer reports it again", () => {
   advance(CHALLENGE_MS);
   controller.handleExpired();
   assert.equal(log.filter(([name]) => name === 'showTimeUp').length, 1);
-  assert.equal(timeouts.length, 1);
+  assert.equal(timeouts.filter((t) => t.ms === SUMMARY_DELAY_MS).length, 1);
 });
 
 // =====================================================================
@@ -850,4 +855,122 @@ test('personal bests are not shown when the browser cannot save them', async () 
   advance(CHALLENGE_MS);
   timeouts.at(-1).fn();
   assert.equal(modals.summary.personal, null);
+});
+
+// =====================================================================
+// Phase 8: practice puzzle and friendly nudges.
+// =====================================================================
+
+/** Run the newest waiting "no move for 20 s" timer (as if 20 s passed). */
+function fireIdleNudge(timeouts) {
+  const t = timeouts.filter((x) => x.ms === IDLE_NUDGE_MS && !x.cancelled).at(-1);
+  if (!t) return false;
+  t.cancelled = true;
+  t.fn();
+  return true;
+}
+
+test('practice: no clock, nothing counted, solving it returns to the welcome card', async () => {
+  const { game, stats, timer, controller, modals, log, solveByClicks } = setup();
+  modals.showWelcome = (note) => log.push(['showWelcome', note]);
+  assert.equal(controller.canPractice, true);
+  controller.startPractice();
+  assert.equal(controller.screen, Screen.PRACTICE);
+  assert.equal(game.diskCount, 3);
+  assert.equal(timer.state, TimerState.IDLE, 'the challenge clock does not start');
+
+  controller.hint();
+  controller.handlePegClick(0); controller.handlePegClick(0); // select + deselect
+  solveByClicks(3);
+  assert.equal(game.solved, true);
+  await settle();
+
+  assert.deepEqual(stats.summary(), new Stats().summary(), 'no Stats at all: moves, hints, puzzles');
+  assert.equal(modals.victory, null, 'no victory modal for practice');
+  assert.equal(controller.screen, Screen.WELCOME);
+  assert.deepEqual(log.at(-1), ['showWelcome', NUDGE.PRACTICE_DONE]);
+  assert.deepEqual(game.snapshot().pegs, [[3, 2, 1], [], []], 'fresh board for the real challenge');
+  assert.equal(game.moveCount, 0);
+
+  controller.start('Ming'); // and the real challenge starts normally
+  assert.equal(timer.state, TimerState.RUNNING);
+  assert.equal(controller.screen, Screen.PLAYING);
+});
+
+test('practice can be skipped at any time', () => {
+  const { game, timer, controller, modals, log, click } = setup();
+  modals.showWelcome = (note) => log.push(['showWelcome', note]);
+  controller.startPractice();
+  click(0, 2);
+  controller.endPractice();
+  assert.equal(controller.screen, Screen.WELCOME);
+  assert.deepEqual(log.at(-1), ['showWelcome', null]);
+  assert.deepEqual(game.snapshot().pegs, [[3, 2, 1], [], []]);
+  assert.equal(timer.state, TimerState.IDLE);
+});
+
+test('practice: always 3 disks, Learning Mode locked, not offered after Start', () => {
+  const { game, controller, ui, learning } = setup();
+  controller.startPractice();
+  controller.setDifficulty(5);
+  assert.equal(game.diskCount, 3);
+  assert.equal(ui.message.text, NUDGE.PRACTICE_ONLY_3);
+  controller.openLearning();
+  assert.equal(learning.isOpen, false);
+  assert.equal(ui.message.text, NUDGE.LEARNING_LATER);
+  controller.restart();
+  assert.equal(controller.screen, Screen.PRACTICE, 'Restart keeps practising');
+
+  controller.endPractice();
+  controller.start();
+  assert.equal(controller.canPractice, false);
+  controller.startPractice();
+  assert.equal(controller.screen, Screen.PLAYING, 'no practice once the challenge runs');
+});
+
+test('nudge: the first valid move gets a word of encouragement', () => {
+  const { controller, ui, click } = setup();
+  controller.start();
+  click(0, 2);
+  assert.deepEqual(ui.message, { text: NUDGE.FIRST_MOVE, type: 'success' });
+  click(0, 1);
+  assert.notEqual(ui.message.text, NUDGE.FIRST_MOVE, 'only the first time');
+});
+
+test('nudge: after 3 refused moves in a row, point to the Hint button', () => {
+  const { controller, ui, click } = setup();
+  controller.start();
+  click(1); // empty source peg: mistake 1
+  assert.equal(ui.message.text, 'Source peg contains no disks.');
+  click(0, 2, 0, 2); // Disk 1 -> C, then Disk 2 onto Disk 1: mistake 2? No: the valid move resets the count
+  assert.equal(ui.message.text, 'Disk 2 cannot go on top of smaller Disk 1.');
+  click(0, 2); // mistake 2
+  click(0, 2); // mistake 3
+  assert.equal(ui.message.text, `Disk 2 cannot go on top of smaller Disk 1. ${NUDGE.STUCK}`);
+  assert.equal(ui.message.type, 'error');
+});
+
+test('nudge: 20 s without a move suggests the Hint button, once until the next move', () => {
+  const { controller, ui, timeouts, click } = setup();
+  controller.start();
+  assert.equal(fireIdleNudge(timeouts), true);
+  assert.deepEqual(ui.message, { text: NUDGE.STUCK, type: 'hint' });
+  assert.equal(fireIdleNudge(timeouts), false, 'not again until the player moves');
+  click(0, 2);
+  assert.equal(fireIdleNudge(timeouts), true, 'a move starts the 20 s again');
+});
+
+test('nudge: none in Learning Mode, after a win, or after Time\'s up', async () => {
+  const { controller, ui, timeouts, advance, solveByClicks } = setup();
+  controller.start();
+  controller.openLearning();
+  ui.message = null;
+  assert.equal(fireIdleNudge(timeouts), false, 'cancelled when Learning Mode opens');
+  controller.closeLearning();
+  solveByClicks(3);
+  await settle();
+  assert.equal(fireIdleNudge(timeouts), false, 'no nudge on a solved puzzle');
+  controller.nextLevel();
+  advance(CHALLENGE_MS);
+  assert.equal(fireIdleNudge(timeouts), false, 'cancelled at Time\'s up');
 });

@@ -68,11 +68,11 @@ export class UIOverlay {
       howLast: byId('how-last'),
       howStacks: byId('how-stacks'),
       howMinimum: byId('how-minimum'),
-      record: byId('record'),
-      recordLevel: byId('record-level'),
-      recordMoves: byId('record-moves'),
-      recordTime: byId('record-time'),
-      controlButtons: ['btn-hint', 'btn-undo', 'btn-restart', 'btn-learn'].map(byId),
+      howPlain: byId('how-plain'),
+      goalText: byId('goal-text'),
+      skipPractice: byId('btn-skip-practice'),
+      controlButtons: ['btn-hint', 'btn-undo', 'btn-restart'].map(byId),
+      learnButton: byId('btn-learn'),
       difficultyButtons: [...doc.querySelectorAll('[data-disks]')],
     };
 
@@ -83,9 +83,17 @@ export class UIOverlay {
       this.#el.messageText.textContent = text;
     });
 
-    // Panels start closed on phones (to save space) and open on bigger screens.
-    if (doc.defaultView.matchMedia('(min-width: 600px)').matches) {
-      doc.querySelectorAll('.panel').forEach((panel) => { panel.open = true; });
+    // Right column: two tabs, "Moves" (open by default) and "How it works".
+    this.#el.tabs = [byId('tab-history'), byId('tab-how')];
+    this.#el.tabs.forEach((tab) => tab.addEventListener('click', () => this.#selectTab(tab)));
+  }
+
+  /** Show one side panel; the other tab stays one click away. */
+  #selectTab(chosen) {
+    for (const tab of this.#el.tabs) {
+      const selected = tab === chosen;
+      tab.setAttribute('aria-selected', String(selected));
+      this.#doc.getElementById(tab.getAttribute('aria-controls')).hidden = !selected;
     }
   }
 
@@ -95,11 +103,14 @@ export class UIOverlay {
    * @param {object} extra
    * @param {{disk, from, to} | null} extra.lastMove  last valid move, for "How it works"
    * @param {boolean} extra.controlsEnabled           false before Start and after Time's up
+   * @param {boolean} extra.challengeControlsEnabled  difficulty + Learning Mode (not during practice)
+   * @param {boolean} extra.practice                   the untimed practice puzzle is on
    * @param {number} extra.puzzlesSolved
-   * @param {{fewestMoves, fastestMs} | null | undefined} extra.personalRecord
-   *   best ever for this level; null = none yet; undefined = cannot be saved (hide it)
    */
-  render(snapshot, { lastMove = null, controlsEnabled = true, puzzlesSolved = 0, personalRecord } = {}) {
+  render(snapshot, {
+    lastMove = null, controlsEnabled = true, challengeControlsEnabled = controlsEnabled,
+    practice = false, puzzlesSolved = 0,
+  } = {}) {
     const n = snapshot.diskCount;
     const power = `2${SUPERSCRIPT[n] ?? `^${n}`}`;
 
@@ -110,12 +121,24 @@ export class UIOverlay {
     this.#el.solved.textContent = String(puzzlesSolved);
 
     for (const button of this.#el.controlButtons) button.disabled = !controlsEnabled;
+    this.#el.learnButton.disabled = !challengeControlsEnabled;
     for (const button of this.#el.difficultyButtons) {
-      button.disabled = !controlsEnabled;
+      button.disabled = !challengeControlsEnabled;
       button.setAttribute('aria-pressed', String(Number(button.dataset.disks) === n));
     }
 
     this.#renderLog(snapshot.log);
+
+    // Goal line (always the same height): what to do, in plain words.
+    this.#el.goalText.textContent = practice
+      ? `Practice (not timed, not counted): move all ${n} disks to Peg C.`
+      : `Goal: move all ${n} disks to Peg C.`;
+    this.#el.skipPractice.hidden = !practice;
+
+    // "How it works": first in plain words, then as code.
+    this.#el.howPlain.textContent = lastMove
+      ? `The computer took Disk ${lastMove.disk} off Peg ${PEG_LETTERS[lastMove.from]} and put it on Peg ${PEG_LETTERS[lastMove.to]}.`
+      : 'Make a move: this panel explains what the computer does with it.';
 
     // "How it works": the last move as the two stack operations it really is.
     this.#el.howLast.textContent = lastMove
@@ -127,16 +150,6 @@ export class UIOverlay {
     this.#el.howMinimum.textContent =
       `Minimum for ${n} disks: ${power} − 1 = ${snapshot.minMoves} moves.`;
 
-    this.#renderRecord(n, personalRecord);
-  }
-
-  /** Personal record widget: hidden when the browser cannot save bests. */
-  #renderRecord(diskCount, record) {
-    this.#el.record.hidden = record === undefined;
-    if (record === undefined) return;
-    this.#el.recordLevel.textContent = `${diskCount} disks`;
-    this.#el.recordMoves.textContent = record ? `${record.fewestMoves} moves` : 'No record yet';
-    this.#el.recordTime.textContent = record ? `Fastest ${ChallengeTimer.format(record.fastestMs)}` : '';
   }
 
   // ----- Top-bar tools -----

@@ -36,8 +36,9 @@ export class Modals {
     // LOCKED: `inert` makes it unclickable and skips it when tabbing.
     this.#el.locked.forEach((el) => { el.inert = true; });
 
-    // Rules start collapsed on small phones so the card never hides the disks.
-    this.#el.welcomeRules.open = doc.defaultView.matchMedia('(min-width: 600px)').matches;
+    // The rules start OPEN (beginners need them); fitWelcome() makes room if needed.
+    this.#el.welcomeRules.open = true;
+    this.#el.defaultNote = byId('welcome-note').innerHTML;
     this.#el.startButton.focus();
 
     // Victory: the ✕ button closes it.
@@ -56,14 +57,46 @@ export class Modals {
    * board is drawn, and again when the window is resized or Projector Mode
    * changes. Starts from the normal layout, then makes the card shorter
    * step by step while it still covers the top disk of Peg A:
-   *   1. collapse the rules,  2. hide the poster banner.
+   *   1. hide the poster banner (decoration),  2. collapse the rules,
+   *   3. compact card (tighter spacing; small phones).
+   * The rules go late because beginners need them most.
    */
   fitWelcome() {
     if (this.#el.welcome.hidden) return;
-    this.#el.welcomeRules.open = this.#doc.defaultView.matchMedia('(min-width: 600px)').matches;
+    const welcome = this.#el.welcome;
+    this.#el.welcomeRules.open = true;
     this.#el.banner.hidden = false;
-    if (this.#welcomeCoversDisks()) this.#el.welcomeRules.open = false;
+    welcome.classList.remove('welcome--compact');
     if (this.#welcomeCoversDisks()) this.#el.banner.hidden = true;
+    if (this.#welcomeCoversDisks()) this.#el.welcomeRules.open = false;
+    if (this.#welcomeCoversDisks()) welcome.classList.add('welcome--compact');
+  }
+
+  /**
+   * Show the welcome card again (after practice) with the board locked.
+   * @param {string|null} note  a message for the player, or null for the usual note
+   */
+  showWelcome(note = null) {
+    const noteEl = this.#doc.getElementById('welcome-note');
+    if (note) noteEl.textContent = note;
+    else noteEl.innerHTML = this.#el.defaultNote;
+    this.#el.welcome.hidden = false;
+    this.#el.locked.forEach((el) => { el.inert = true; });
+    this.fitWelcome();
+    this.#el.startButton.focus();
+  }
+
+  /**
+   * Hide or show only the CARD (the board stays locked). Used by the guided
+   * tour, so the spotlight can show the real board with its disks.
+   */
+  setWelcomeCardVisible(visible) {
+    this.#el.welcome.hidden = !visible;
+    if (visible) {
+      this.fitWelcome();
+      // Keyboard users land on "Start Challenge" again (focus was lost while the card was hidden).
+      this.#el.startButton.focus();
+    }
   }
 
   #welcomeCoversDisks() {
