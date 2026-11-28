@@ -100,6 +100,10 @@ The full spec lives in `docs/` (plan + assignment PDF:
 - Learning Mode layers: board + steps first; "Show how the computer thinks" and "Why does this work?" are closed `<details>`.
 - Welcome safety net order: hide banner -> collapse rules -> compact card. Focus returns to Start Challenge whenever the card reappears.
 
+## Older / in-app browsers (WeChat)
+- Friends open the link inside WeChat, whose engine can be older. Do NOT use: top-level `await`, `??=`/`||=`, `structuredClone`, `Object.hasOwn`, CSS `inset` shorthand, `:has()`. `js/compat.js` (classic script, loaded first) polyfills `replaceChildren` and `Array.at` and shows an "Open in Browser" message if the game fails to start (`main.js` sets `data-ready="true"` at the end).
+- The tour spotlight is repositioned on scroll/resize (rAF-throttled); phone welcome card is compact with rules folded (the tour explains them).
+
 ## Git
 - Individual assignment: NEVER add Claude as co-author or contributor (no `Co-Authored-By` lines, no AI attribution in commits or PRs).
 - Commit or push only when the user asks. The user creates the GitHub repo and connects the remote.

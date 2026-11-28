@@ -185,7 +185,7 @@ export class LearningMode {
         ? `${pegLetter(lastMove.from)}.pop() → ${lastMove.disk}; ${pegLetter(lastMove.to)}.push(${lastMove.disk})`
         : null,
       callStack,
-      activeFrameId: callStack.at(-1)?.id ?? null,
+      activeFrameId: callStack.length ? callStack[callStack.length - 1].id : null,
       subTower: subTowerOf(callStack),
     };
   }

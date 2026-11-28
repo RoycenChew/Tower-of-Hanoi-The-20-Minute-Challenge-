@@ -194,6 +194,7 @@ export class UIOverlay {
    */
   setTimerLevel(level) {
     this.#el.timer.dataset.level = level;
+    this.#el.timer.parentElement.dataset.level = level; // the chip (for its colours)
     this.#el.timerStatus.textContent = TIMER_STATUS[level];
     this.#doc.body.classList.toggle('final-minute', level === 'warn1');
   }

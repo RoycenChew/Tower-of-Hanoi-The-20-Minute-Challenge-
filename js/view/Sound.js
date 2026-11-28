@@ -40,7 +40,7 @@ export class Sound {
     const AudioEngine = globalThis.AudioContext ?? globalThis.webkitAudioContext;
     if (!AudioEngine) return; // no Web Audio: the game simply stays silent
     try {
-      this.#context ??= new AudioEngine();
+      if (!this.#context) this.#context = new AudioEngine();
       if (this.#context.state === 'suspended') this.#context.resume().catch(() => {});
     } catch {
       this.#context = null;

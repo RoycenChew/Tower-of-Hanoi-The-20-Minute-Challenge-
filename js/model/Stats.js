@@ -90,7 +90,7 @@ export function updateBestScore(saved, score) {
 /** "3", "3 and 4", "3, 4 and 5" */
 function joinLevels(levels) {
   if (levels.length <= 1) return levels.join('');
-  return `${levels.slice(0, -1).join(', ')} and ${levels.at(-1)}`;
+  return `${levels.slice(0, -1).join(', ')} and ${levels[levels.length - 1]}`;
 }
 
 /**
@@ -147,7 +147,7 @@ export class Stats {
       totalHints: this.totalHints,
       totalUndos: this.totalUndos,
       invalidAttempts: this.invalidAttempts,
-      bestByLevel: structuredClone(this.bestByLevel),
+      bestByLevel: JSON.parse(JSON.stringify(this.bestByLevel)), // a deep copy
       score: this.score,
     };
   }

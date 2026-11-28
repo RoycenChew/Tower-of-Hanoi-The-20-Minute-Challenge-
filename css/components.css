@@ -545,7 +545,10 @@
    bottom of the board are never hidden. */
 .welcome {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 5;
   display: flex;
   justify-content: center;
@@ -830,7 +833,10 @@
 
 .timeup {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 50;
   display: grid;
   place-items: center;
@@ -876,7 +882,10 @@
 
 .confetti {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
   pointer-events: none;
@@ -1564,7 +1573,10 @@
 
 .tour {
   position: fixed;
-  inset: auto auto 16px 50%;
+  top: auto;
+  right: auto;
+  bottom: 16px;
+  left: 50%;
   width: min(92vw, 30em);
   margin: 0;
   padding: 1em 1.1em 0.9em;
@@ -1577,7 +1589,8 @@
 }
 
 .tour.tour--top {
-  inset: 16px auto auto 50%;
+  top: 16px;
+  bottom: auto;
 }
 
 .tour::backdrop {
@@ -1702,3 +1715,95 @@
 .welcome--compact .welcome__note {
   font-size: 0.8em;
 }
+
+/* ===================== Phones: a less crowded first screen ===================== */
+
+/* "This browser cannot run the game" (shown by js/compat.js only when needed). */
+.compat-warning {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  left: 12px;
+  z-index: 100;
+  padding: 0.9em 1em;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #FFFFFF;
+  background: var(--error);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 599px) {
+  /* Smaller clock and title on phones (still the biggest thing in the top bar). */
+  .timer {
+    font-size: calc(30px * var(--font-scale));
+  }
+
+  .timer-chip {
+    padding: 0.1em 0.5em;
+  }
+
+  .brand-tile {
+    width: 1.9em;
+    height: 1.9em;
+  }
+
+  /* Welcome card: the tour explains the rules, so on phones they start folded
+     and the card is compact: the board underneath stays clearly visible. */
+  .welcome__card {
+    gap: 0.4em;
+    padding: 0.7em 0.85em 0.75em;
+  }
+
+  .welcome__title {
+    font-size: 1em;
+  }
+
+  .welcome__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .welcome__note {
+    font-size: 0.8em;
+  }
+
+  .btn--big {
+    min-height: 50px;
+    font-size: 1em;
+  }
+
+  /* Tour card: smaller, so more of the board around the spotlight shows. */
+  .tour {
+    width: calc(100vw - 24px);
+    padding: 0.75em 0.85em 0.6em;
+    font-size: 0.92em;
+  }
+
+  .tour.tour--top {
+    top: 10px;
+  }
+
+  .tour {
+    bottom: 10px;
+  }
+
+  .tour__title {
+    font-size: 1.15em;
+  }
+
+  .goal__text {
+    font-size: 0.95em;
+  }
+
+  .metric dd {
+    font-size: 1.35em;
+  }
+}
+

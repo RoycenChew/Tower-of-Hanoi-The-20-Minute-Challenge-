@@ -40,7 +40,7 @@ export class Preferences {
   }
 
   get(name, fallback = null) {
-    return Object.hasOwn(this.#data, name) ? this.#data[name] : fallback;
+    return Object.prototype.hasOwnProperty.call(this.#data, name) ? this.#data[name] : fallback;
   }
 
   /** Save one value. Returns false (and carries on) if saving failed. */

@@ -36,8 +36,9 @@ export class Modals {
     // LOCKED: `inert` makes it unclickable and skips it when tabbing.
     this.#el.locked.forEach((el) => { el.inert = true; });
 
-    // The rules start OPEN (beginners need them); fitWelcome() makes room if needed.
-    this.#el.welcomeRules.open = true;
+    // Rules: open on bigger screens; folded on phones, where the tour explains
+    // them and the card must leave the board visible. fitWelcome() decides.
+    this.#el.welcomeRules.open = this.#rulesOpenByDefault();
     this.#el.defaultNote = byId('welcome-note').innerHTML;
     this.#el.startButton.focus();
 
@@ -64,7 +65,7 @@ export class Modals {
   fitWelcome() {
     if (this.#el.welcome.hidden) return;
     const welcome = this.#el.welcome;
-    this.#el.welcomeRules.open = true;
+    this.#el.welcomeRules.open = this.#rulesOpenByDefault();
     this.#el.banner.hidden = false;
     welcome.classList.remove('welcome--compact');
     if (this.#welcomeCoversDisks()) this.#el.banner.hidden = true;
@@ -97,6 +98,10 @@ export class Modals {
       // Keyboard users land on "Start Challenge" again (focus was lost while the card was hidden).
       this.#el.startButton.focus();
     }
+  }
+
+  #rulesOpenByDefault() {
+    return this.#doc.defaultView.matchMedia('(min-width: 600px)').matches;
   }
 
   #welcomeCoversDisks() {

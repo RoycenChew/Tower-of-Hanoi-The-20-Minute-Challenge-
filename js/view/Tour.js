@@ -44,6 +44,7 @@ export class Tour {
   #offerPractice = false;
   #onOpen;
   #onClose;
+  #frame = 0; // pending animation frame for repositioning
 
   /**
    * @param {Document} doc
@@ -82,9 +83,19 @@ export class Tour {
       event.preventDefault();
       this.#close('skip');
     });
-    doc.defaultView.addEventListener('resize', () => {
-      if (this.isOpen) this.#place();
-    });
+    // Keep the spotlight on its target while the page scrolls or the phone
+    // screen changes size (address bar sliding, rotating, zooming).
+    const follow = () => {
+      if (!this.isOpen || this.#frame) return;
+      this.#frame = doc.defaultView.requestAnimationFrame(() => {
+        this.#frame = 0;
+        this.#position();
+      });
+    };
+    doc.defaultView.addEventListener('scroll', follow, { passive: true, capture: true });
+    doc.defaultView.addEventListener('resize', follow);
+    doc.defaultView.visualViewport?.addEventListener('resize', follow);
+    doc.defaultView.visualViewport?.addEventListener('scroll', follow);
   }
 
   get isOpen() {
@@ -122,19 +133,27 @@ export class Tour {
     (this.#el.choice.hidden ? this.#el.next : this.#el.choice.querySelector('.btn')).focus();
   }
 
-  /** Put the spotlight on the step's target and the card where it does not cover it. */
+  /** New step: bring its target into view, then position the spotlight and card. */
   #place() {
     const target = this.#doc.querySelector(TOUR_STEPS[this.#index].target);
-    const r = target?.getBoundingClientRect();
+    if (target && target.getBoundingClientRect().width > 0) target.scrollIntoView({ block: 'nearest' });
+    this.#position();
+  }
+
+  /**
+   * Put the spotlight exactly on the target and the card where it does not
+   * cover it. Called again on every scroll / resize, so it never lags behind.
+   */
+  #position() {
+    const target = this.#doc.querySelector(TOUR_STEPS[this.#index].target);
+    const box = target?.getBoundingClientRect();
     const { dialog, spotlight } = this.#el;
 
-    if (!r || r.width === 0) { // target not on screen (e.g. in Learning Mode)
+    if (!box || box.width === 0) { // target not on screen (e.g. in Learning Mode)
       spotlight.hidden = true;
       dialog.classList.remove('tour--top');
       return;
     }
-    target.scrollIntoView({ block: 'nearest' });
-    const box = target.getBoundingClientRect();
     const pad = 8;
     spotlight.hidden = false;
     spotlight.style.left = `${box.left - pad}px`;

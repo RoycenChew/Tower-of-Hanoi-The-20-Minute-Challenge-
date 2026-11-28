@@ -81,7 +81,13 @@ document.addEventListener('visibilitychange', () => {
 
 // Debug panel: only with ?debug=1. A dynamic import means the file is not
 // even downloaded otherwise.
+// (No top-level "await": older browsers, e.g. some in-app browsers, cannot read it.)
 if (new URLSearchParams(location.search).get('debug') === '1') {
-  const { mountDebugPanel } = await import('./view/DebugPanel.js');
-  mountDebugPanel(document, timer);
+  import('./view/DebugPanel.js').then(({ mountDebugPanel }) => mountDebugPanel(document, timer));
 }
+
+// Fonts arrive a moment after the page: check the welcome card again once they have.
+document.fonts?.ready.then(() => modals.fitWelcome());
+
+// Tell js/compat.js that the game started (so it shows no "browser too old" message).
+document.documentElement.dataset.ready = 'true';

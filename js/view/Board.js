@@ -246,7 +246,7 @@ function describePeg(peg, disks, isSelected) {
   if (disks.length === 0) {
     text += 'empty';
   } else {
-    text += `${disks.length} ${disks.length === 1 ? 'disk' : 'disks'}, top disk ${disks.at(-1)}`;
+    text += `${disks.length} ${disks.length === 1 ? 'disk' : 'disks'}, top disk ${disks[disks.length - 1]}`;
   }
   return isSelected ? `${text}, selected` : text;
 }
